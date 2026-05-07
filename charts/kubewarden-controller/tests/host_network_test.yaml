@@ -1,0 +1,165 @@
+suite: host-network configuration
+templates:
+  - deployment.yaml
+tests:
+  - it: "should not set hostNetwork and should not pass --host-network flag by default"
+    asserts:
+      - notExists:
+          path: spec.template.spec.hostNetwork
+      - notExists:
+          path: spec.template.spec.dnsPolicy
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: "--host-network"
+          any: true
+
+  - it: "should set hostNetwork, dnsPolicy and pass --host-network flag when hostNetwork is true"
+    set:
+      hostNetwork: true
+    asserts:
+      - equal:
+          path: spec.template.spec.hostNetwork
+          value: true
+      - equal:
+          path: spec.template.spec.dnsPolicy
+          value: ClusterFirstWithHostNet
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--host-network"
+
+  - it: "should not set affinity when hostNetwork is true and no affinity is configured"
+    set:
+      hostNetwork: true
+    asserts:
+      - notExists:
+          path: spec.template.spec.affinity
+
+  - it: "should not set affinity when hostNetwork is false and no affinity is set"
+    asserts:
+      - notExists:
+          path: spec.template.spec.affinity
+
+  - it: "should use controller-specific affinity when set"
+    set:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: kubewarden-controller
+            topologyKey: kubernetes.io/hostname
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].topologyKey
+          value: kubernetes.io/hostname
+      - equal:
+          path: spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchLabels["app.kubernetes.io/name"]
+          value: kubewarden-controller
+
+  - it: "should fall back to global.affinity when controller-specific affinity is not set"
+    set:
+      global.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+    asserts:
+      - equal:
+          path: spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0].key
+          value: kubernetes.io/os
+
+  - it: "should use custom ports when overridden in values"
+    set:
+      ports.webhook: 10443
+      ports.healthProbe: 10081
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 10443
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.port
+          value: 10081
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.httpGet.port
+          value: 10081
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --webhook-server-port=10443
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --health-probe-bind-address=:10081
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --metrics-bind-address=0
+
+  - it: "should fail when hostNetwork is true and telemetry sidecar mode is configured"
+    set:
+      hostNetwork: true
+      telemetry:
+        mode: "sidecar"
+        metrics: true
+        tracing: true
+    asserts:
+      - failedTemplate:
+          errorMessage: "hostNetwork and telemetry.mode=sidecar are incompatible: OpenTelemetry sidecar injection causes port conflicts in host-network mode. Use telemetry.mode=custom with a remote collector instead."
+
+  - it: "should not affect custom telemetry mode when hostNetwork is true"
+    set:
+      hostNetwork: true
+      telemetry:
+        mode: "custom"
+        metrics: true
+        tracing: true
+        custom:
+          endpoint: "https://remote-collector:4317"
+          insecure: true
+    asserts:
+      - equal:
+          path: spec.template.spec.hostNetwork
+          value: true
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--host-network"
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: "--enable-otel-sidecar"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--enable-metrics"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--enable-tracing"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: "https://remote-collector:4317"
+
+  - it: "should enable otel sidecar when hostNetwork is not set and sidecar telemetry is configured"
+    set:
+      telemetry:
+        mode: "sidecar"
+        metrics: true
+    asserts:
+      - notExists:
+          path: spec.template.spec.hostNetwork
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: "--host-network"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--enable-otel-sidecar"
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: "--enable-metrics"
+      - isSubset:
+          path: spec.template.metadata.annotations
+          content:
+            "sidecar.opentelemetry.io/inject": "true"

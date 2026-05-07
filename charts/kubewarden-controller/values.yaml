@@ -151,6 +151,43 @@ preDeleteHook:
 # evaluations that could interfere with the Kubewarden stack running in the
 # admission controller namespace.
 alwaysAcceptAdmissionReviewsOnDeploymentsNamespace: true
+# affinity configures affinity rules for the controller pod.
+# This takes precedence over global.affinity when set.
+# When hostNetwork is enabled, users should set appropriate podAntiAffinity
+# rules here to prevent host-port conflicts between controller replicas.
+# affinity:
+#   podAntiAffinity:
+#     requiredDuringSchedulingIgnoredDuringExecution:
+#     - labelSelector:
+#         matchLabels:
+#           app.kubernetes.io/name: kubewarden-controller
+#       topologyKey: kubernetes.io/hostname
+affinity: {}
+# hostNetwork enables host network mode for the controller pod and all
+# PolicyServer pods managed by this controller.
+# WARNING: enabling this increases the attack surface by exposing webhook
+# endpoints on the host network and giving pods visibility of all node network
+# interfaces. Use only when the Kubernetes API server cannot reach pod-network
+# webhook endpoints (e.g. clusters using a non-VPC CNI with NAT).
+# WARNING: When hostNetwork is enabled, users are responsible for setting
+# appropriate podAntiAffinity rules to prevent host-port conflicts between
+# controller replicas on the same node.
+# NOTE: hostNetwork mode is incompatible with telemetry sidecar mode
+# (telemetry.mode=sidecar). This combination is rejected; 
+hostNetwork: false
+
+# Only modify this section if hostNetwork is enabled. When `hostNetwork` is
+# enabled, each port is bound on the host network interface and must not clash
+# with other workloads.
+ports:
+  # Port the controller webhook server listens on.
+  webhook: 9443 # @schema minimum:1;maximum:65535
+  # Port for the controller liveness and readiness probes.
+  healthProbe: 8081 # @schema minimum:1;maximum:65535
+  # Port for the controller Prometheus metrics endpoint.
+  # Note: This is only used for the Service port; the pod-side metrics endpoint
+  # is not bound to the host network interface even when hostNetwork is enabled.
+  metrics: 8088 # @schema minimum:1;maximum:65535
 # Verbosity of logging. Can be one of 'debug', 'info', 'error'.
 logLevel: info
 # open-telemetry options

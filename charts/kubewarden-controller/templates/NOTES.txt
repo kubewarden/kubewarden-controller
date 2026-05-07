@@ -10,4 +10,12 @@ If you'd like to support us, we'd love to hear from you as one of our adopters.
 
 Adopters can be public or private. 
 
-Learn how to add your organization as a Kubewarden adopter by checking out the ADOPTERS.md file here: https://github.com/kubewarden/community/blob/main/ADOPTERS.md
+Learn how to add your organization as a Kubewarden adopter by checking out the
+ADOPTERS.md file here:
+https://github.com/kubewarden/community/blob/main/ADOPTERS.md
+
+{{ if .Values.hostNetwork }}
+⚠️  WARNING  ⚠️
+Host Network is enabled. Ensure you set appropriate podAntiAffinity rules to
+prevent host port conflicts between controller replicas on the same node.
+{{- end }}

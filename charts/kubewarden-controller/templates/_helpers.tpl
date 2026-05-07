@@ -181,3 +181,31 @@ are configured.
 - {{ .Values.auditScanner.reportCRDsKind }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Compute the effective affinity for the controller deployment.
+Uses the controller-specific affinity if set, otherwise falls back to
+global.affinity for backward compatibility.
+
+NOTE: When hostNetwork is enabled, users are responsible for setting
+appropriate podAntiAffinity rules to prevent host-port conflicts between
+controller replicas on the same node.
+*/}}
+{{- define "kubewarden-controller.effectiveAffinity" -}}
+{{- if .Values.affinity -}}
+  {{- toYaml .Values.affinity -}}
+{{- else if .Values.global.affinity -}}
+  {{- toYaml .Values.global.affinity -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Validate that hostNetwork and telemetry sidecar mode are not both enabled.
+They are incompatible because multiple OTel sidecars on the same node would
+cause port conflicts in host-network mode.
+*/}}
+{{- define "kubewarden-controller.validateHostNetworkSidecar" -}}
+{{- if and .Values.hostNetwork (eq .Values.telemetry.mode "sidecar") (or .Values.telemetry.metrics .Values.telemetry.tracing) -}}
+{{- fail "hostNetwork and telemetry.mode=sidecar are incompatible: OpenTelemetry sidecar injection causes port conflicts in host-network mode. Use telemetry.mode=custom with a remote collector instead." -}}
+{{- end -}}
+{{- end -}}

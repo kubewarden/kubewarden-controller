@@ -13,12 +13,31 @@
           "type": "string",
           "minLength": 1
         },
+        "webhookPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Port for the PolicyServer webhook listener. When omitted, the controller uses the default (8443)."
+        },
+        "readinessProbePort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Port for the PolicyServer readiness probe. When omitted, the controller uses the default (8081)."
+        },
+        "metricsPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Port for the PolicyServer metrics endpoint. When omitted, the controller uses the default (8080)."
+        },
+        "affinity": {
+          "type": "object",
+          "description": "Affinity rules for the default PolicyServer. Takes precedence over global.affinity."
+        },
         "namespacedPoliciesCapabilities": {
           "description": "Host capability paths allowed for namespaced policies on this PolicyServer. Catch obvious errors",
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": ["array", "null"],
           "items": {
             "type": "string",
             "minLength": 1,
@@ -47,14 +66,10 @@
         {
           "oneOf": [
             {
-              "required": [
-                "minAvailable"
-              ]
+              "required": ["minAvailable"]
             },
             {
-              "required": [
-                "maxUnavailable"
-              ]
+              "required": ["maxUnavailable"]
             }
           ]
         },
@@ -62,14 +77,10 @@
           "not": {
             "allOf": [
               {
-                "required": [
-                  "minAvailable"
-                ]
+                "required": ["minAvailable"]
               },
               {
-                "required": [
-                  "maxUnavailable"
-                ]
+                "required": ["maxUnavailable"]
               }
             ]
           }

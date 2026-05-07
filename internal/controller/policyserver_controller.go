@@ -67,6 +67,15 @@ type PolicyServerReconciler struct {
 	// policy-server Deployment, sourced from the controller's own
 	// --image-pull-secrets flag.
 	ImagePullSecrets []corev1.LocalObjectReference
+	// HostNetwork enables host network mode on PolicyServer Deployments.
+	// When true, the controller also sets dnsPolicy to ClusterFirstWithHostNet
+	// so that in-cluster DNS resolution keeps working.
+	HostNetwork bool
+	// PolicyServerMetricsPort is the global default metrics port for PolicyServer
+	// Service objects. It is populated from the KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT
+	// environment variable at startup, falling back to constants.PolicyServerMetricsPort.
+	// A per-PolicyServer CRD field (spec.metricsPort) always takes priority.
+	PolicyServerMetricsPort int32
 }
 
 // TelemetryConfiguration is a struct that contains the configuration for the
