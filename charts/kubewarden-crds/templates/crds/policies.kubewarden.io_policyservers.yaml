@@ -1173,6 +1173,30 @@ spec:
                   eviction. The value can be an absolute number or a percentage. Only one of
                   MinAvailable or Max MaxUnavailable can be set.
                 x-kubernetes-int-or-string: true
+              metricsPort:
+                description: |-
+                  Port exposed by the metrics Service for this policy server.
+                  When unset, defaults to the controller-wide default
+                  (KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT env var, or 8080).
+                  Only relevant when metrics are enabled.
+
+                  Use this field to customize which port Prometheus scrapes for this
+                  PolicyServer's metrics Service (e.g. to match naming conventions or
+                  avoid Service-level port collisions).
+
+                  NOTE: this field controls only the Service Port (the externally visible
+                  scrape port). The Service TargetPort — the port the pod actually listens
+                  on — is always the controller-wide default and is not affected by this
+                  field. This is intentional: when the OpenTelemetry sidecar mode is
+                  enabled, each pod gets its own injected sidecar, but the pod-side
+                  Prometheus listener port is determined by controller-wide/injection
+                  configuration, not per PolicyServer. Therefore, changing this field does
+                  not change the pod listener port and will not resolve pod-port conflicts
+                  such as those caused by hostNetwork.
+                format: int32
+                maximum: 65535
+                minimum: 1
+                type: integer
               minAvailable:
                 anyOf:
                 - type: integer
@@ -1204,6 +1228,14 @@ spec:
                   Note: If the referenced PriorityClass is deleted, existing pods
                   remain unchanged, but new pods that reference it cannot be created.
                 type: string
+              readinessProbePort:
+                description: |-
+                  Port used by the policy server to expose the readiness probe endpoint.
+                  When unset, defaults to 8081.
+                format: int32
+                maximum: 65535
+                minimum: 1
+                type: integer
               replicas:
                 description: Replicas is the number of desired replicas.
                 format: int32
@@ -1731,6 +1763,15 @@ spec:
                   configuration. The configuration must be under a key named
                   verification-config in the ConfigMap.
                 type: string
+              webhookPort:
+                description: |-
+                  Port where the policy server listens for incoming webhook requests.
+                  When unset, defaults to 8443. This is the port the Kubernetes API server
+                  reaches when evaluating admission requests.
+                format: int32
+                maximum: 65535
+                minimum: 1
+                type: integer
             required:
             - image
             - replicas

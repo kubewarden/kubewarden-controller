@@ -175,6 +175,7 @@ func (v *policyServerValidator) validate(ctx context.Context, policyServer *Poli
 
 	allErrs = append(allErrs, validateLimitsAndRequests(policyServer.Spec.Limits, policyServer.Spec.Requests)...)
 	allErrs = append(allErrs, validateNamespacedPoliciesCapabilities(policyServer.Spec.NamespacedPoliciesCapabilities)...)
+	allErrs = append(allErrs, v.validatePorts(policyServer)...)
 
 	if len(allErrs) == 0 {
 		return nil
@@ -274,7 +275,6 @@ func validateNamespacedPoliciesCapabilities(capabilities []string) field.ErrorLi
 			allErrs = append(allErrs, err)
 		}
 	}
-
 	return allErrs
 }
 
@@ -326,4 +326,25 @@ func validateSingleCapability(pattern string, path *field.Path) *field.Error {
 	return field.Invalid(path, pattern,
 		fmt.Sprintf("%q is not a complete capability path; use %q to allow all capabilities under it",
 			pattern, pattern+"/*"))
+}
+
+// validatePorts checks that the port fields in the PolicyServer spec do not
+// conflict with each other. Only pod-side ports (webhookPort, readinessProbePort)
+// are validated against each other. spec.metricsPort is a Service-layer-only
+// setting and cannot conflict with pod-side ports.
+func (v *policyServerValidator) validatePorts(policyServer *PolicyServer) field.ErrorList {
+	var allErrs field.ErrorList
+
+	webhookPort := policyServer.EffectiveWebhookPort()
+	readinessPort := policyServer.EffectiveReadinessProbePort()
+
+	if webhookPort == readinessPort {
+		allErrs = append(allErrs, field.Invalid(
+			field.NewPath("spec").Child("readinessProbePort"),
+			readinessPort,
+			fmt.Sprintf("readinessProbePort must differ from webhookPort (%d)", webhookPort),
+		))
+	}
+
+	return allErrs
 }

@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
 	"github.com/kubewarden/adm-controller/internal/certs"
@@ -86,6 +87,9 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 
 	k8sManager, err := ctrl.NewManager(restConfig, ctrl.Options{
 		Scheme: scheme.Scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
 	})
 	Expect(err).ToNot(HaveOccurred())
 
@@ -122,11 +126,15 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&PolicyServerReconciler{
-		Client:                k8sManager.GetClient(),
-		Scheme:                k8sManager.GetScheme(),
-		DeploymentsNamespace:  deploymentsNamespace,
-		ClientCAConfigMapName: clientCAConfigMapName,
-		ImagePullSecrets:      []corev1.LocalObjectReference{{Name: reconcilerImagePullSecret}},
+		Client:                  k8sManager.GetClient(),
+		Scheme:                  k8sManager.GetScheme(),
+		DeploymentsNamespace:    deploymentsNamespace,
+		ClientCAConfigMapName:   clientCAConfigMapName,
+		ImagePullSecrets:        []corev1.LocalObjectReference{{Name: reconcilerImagePullSecret}},
+		PolicyServerMetricsPort: constants.PolicyServerMetricsPort,
+		TelemetryConfiguration: TelemetryConfiguration{
+			MetricsEnabled: true,
+		},
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

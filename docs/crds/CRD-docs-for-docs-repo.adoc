@@ -946,6 +946,38 @@ Supported wildcard patterns: +
 - "category/version/*": allow all capabilities of a specific version (e.g. "oci/v1/*") +
 - Specific capability paths (e.g. "oci/v1/verify", "net/v1/dns_lookup_host") + |  | Optional: \{} +
 
+| *`webhookPort`* __integer__ | Port where the policy server listens for incoming webhook requests. +
+When unset, defaults to 8443. This is the port the Kubernetes API server +
+reaches when evaluating admission requests. + |  | Maximum: 65535 +
+Minimum: 1 +
+Optional: \{} +
+
+| *`readinessProbePort`* __integer__ | Port used by the policy server to expose the readiness probe endpoint. +
+When unset, defaults to 8081. + |  | Maximum: 65535 +
+Minimum: 1 +
+Optional: \{} +
+
+| *`metricsPort`* __integer__ | Port exposed by the metrics Service for this policy server. +
+When unset, defaults to the controller-wide default +
+(KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT env var, or 8080). +
+Only relevant when metrics are enabled. +
+
+Use this field to customize which port Prometheus scrapes for this +
+PolicyServer's metrics Service (e.g. to match naming conventions or +
+avoid Service-level port collisions). +
+
+NOTE: this field controls only the Service Port (the externally visible +
+scrape port). The Service TargetPort — the port the pod actually listens +
+on — is always the controller-wide default and is not affected by this +
+field. This is intentional: when the OpenTelemetry sidecar mode is +
+enabled, each pod gets its own injected sidecar, but the pod-side +
+Prometheus listener port is determined by controller-wide/injection +
+configuration, not per PolicyServer. Therefore, changing this field does +
+not change the pod listener port and will not resolve pod-port conflicts +
+such as those caused by hostNetwork. + |  | Maximum: 65535 +
+Minimum: 1 +
+Optional: \{} +
+
 |===
 
 

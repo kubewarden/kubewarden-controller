@@ -11,6 +11,9 @@
         "additionalLabels": {
             "type": "object"
         },
+        "affinity": {
+            "type": "object"
+        },
         "alwaysAcceptAdmissionReviewsOnDeploymentsNamespace": {
             "type": "boolean"
         },
@@ -133,6 +136,9 @@
                 }
             }
         },
+        "hostNetwork": {
+            "type": "boolean"
+        },
         "image": {
             "type": "object",
             "properties": {
@@ -231,6 +237,26 @@
                             }
                         }
                     }
+                }
+            }
+        },
+        "ports": {
+            "type": "object",
+            "properties": {
+                "healthProbe": {
+                    "type": "integer",
+                    "maximum": 65535,
+                    "minimum": 1
+                },
+                "metrics": {
+                    "type": "integer",
+                    "maximum": 65535,
+                    "minimum": 1
+                },
+                "webhook": {
+                    "type": "integer",
+                    "maximum": 65535,
+                    "minimum": 1
                 }
             }
         },

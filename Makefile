@@ -54,6 +54,9 @@ helm-unittest:
 test-e2e: controller-image audit-scanner-image policy-server-image
 	$(GO_BUILD_ENV) go test ./e2e/ -v
 
+.PHONY: test-all
+test-all: test helm-unittest test-e2e
+
 .PHONY: fmt-go
 fmt-go:
 	$(GO_BUILD_ENV) go fmt ./...
