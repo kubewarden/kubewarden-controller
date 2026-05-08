@@ -353,6 +353,94 @@ func findClusterPoliciesForPod(ctx context.Context, k8sClient client.Client, obj
 	return findClusterPoliciesForConfigMap(&configMap)
 }
 
+// findAdmissionPoliciesForPolicyServer maps a PolicyServer event to reconcile
+// requests for AdmissionPolicies that reference it by name.
+func findAdmissionPoliciesForPolicyServer(ctx context.Context, k8sClient client.Client, object client.Object) []reconcile.Request {
+	policyServer, ok := object.(*policiesv1.PolicyServer)
+	if !ok {
+		return []reconcile.Request{}
+	}
+
+	admissionPolicies := policiesv1.AdmissionPolicyList{}
+	if err := k8sClient.List(ctx, &admissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name}); err != nil {
+		return []reconcile.Request{}
+	}
+
+	requests := make([]reconcile.Request, 0, len(admissionPolicies.Items))
+	for _, policy := range admissionPolicies.Items {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: client.ObjectKey{Name: policy.Name, Namespace: policy.Namespace},
+		})
+	}
+	return requests
+}
+
+// findAdmissionPolicyGroupsForPolicyServer maps a PolicyServer event to
+// reconcile requests for all AdmissionPolicyGroups that reference it by name.
+func findAdmissionPolicyGroupsForPolicyServer(ctx context.Context, k8sClient client.Client, object client.Object) []reconcile.Request {
+	policyServer, ok := object.(*policiesv1.PolicyServer)
+	if !ok {
+		return []reconcile.Request{}
+	}
+
+	admissionPolicyGroups := policiesv1.AdmissionPolicyGroupList{}
+	if err := k8sClient.List(ctx, &admissionPolicyGroups, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name}); err != nil {
+		return []reconcile.Request{}
+	}
+
+	requests := make([]reconcile.Request, 0, len(admissionPolicyGroups.Items))
+	for _, policy := range admissionPolicyGroups.Items {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: client.ObjectKey{Name: policy.Name, Namespace: policy.Namespace},
+		})
+	}
+	return requests
+}
+
+// findClusterAdmissionPoliciesForPolicyServer maps a PolicyServer event to reconcile
+// requests for all ClusterAdmissionPolicies that reference it by name.
+func findClusterAdmissionPoliciesForPolicyServer(ctx context.Context, k8sClient client.Client, object client.Object) []reconcile.Request {
+	policyServer, ok := object.(*policiesv1.PolicyServer)
+	if !ok {
+		return []reconcile.Request{}
+	}
+
+	clusterAdmissionPolicies := policiesv1.ClusterAdmissionPolicyList{}
+	if err := k8sClient.List(ctx, &clusterAdmissionPolicies, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name}); err != nil {
+		return []reconcile.Request{}
+	}
+
+	requests := make([]reconcile.Request, 0, len(clusterAdmissionPolicies.Items))
+	for _, policy := range clusterAdmissionPolicies.Items {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: client.ObjectKey{Name: policy.Name},
+		})
+	}
+	return requests
+}
+
+// findClusterAdmissionPolicyGroupsForPolicyServer maps a PolicyServer event to reconcile
+// requests for all ClusterAdmissionPolicyGroups that reference it by name.
+func findClusterAdmissionPolicyGroupsForPolicyServer(ctx context.Context, k8sClient client.Client, object client.Object) []reconcile.Request {
+	policyServer, ok := object.(*policiesv1.PolicyServer)
+	if !ok {
+		return []reconcile.Request{}
+	}
+
+	clusterAdmissionPolicyGroups := policiesv1.ClusterAdmissionPolicyGroupList{}
+	if err := k8sClient.List(ctx, &clusterAdmissionPolicyGroups, client.MatchingFields{constants.PolicyServerIndexKey: policyServer.Name}); err != nil {
+		return []reconcile.Request{}
+	}
+
+	requests := make([]reconcile.Request, 0, len(clusterAdmissionPolicyGroups.Items))
+	for _, policy := range clusterAdmissionPolicyGroups.Items {
+		requests = append(requests, reconcile.Request{
+			NamespacedName: client.ObjectKey{Name: policy.Name},
+		})
+	}
+	return requests
+}
+
 func hasKubewardenLabel(labels map[string]string) bool {
 	// Pre v1.16.0
 	kubewardenLabel := labels["kubewarden"]
