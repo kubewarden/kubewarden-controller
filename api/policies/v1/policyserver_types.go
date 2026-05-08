@@ -227,15 +227,21 @@ const (
 	// PolicyServerPodDisruptionBudgetReconciled represents the condition of the
 	// Policy Server PodDisruptionBudget reconciliation.
 	PolicyServerPodDisruptionBudgetReconciled PolicyServerConditionType = "PodDisruptionBudgetReconciled"
+	// PolicyServerPolicyWebhooksCleanedUp represents the condition signalling
+	// whether the webhook configurations of the policies bound to a
+	// PolicyServer being deleted have been cleaned up. The PolicyServer's
+	// finalizer is only removed once this condition becomes True.
+	PolicyServerPolicyWebhooksCleanedUp PolicyServerConditionType = "PolicyWebhooksCleanedUp"
 )
 
 // PolicyServerStatus defines the observed state of PolicyServer.
 type PolicyServerStatus struct {
 	// Conditions represent the observed conditions of the
-	// PolicyServer resource.  Known .status.conditions.types
-	// are: "PolicyServerSecretReconciled",
-	// "PolicyServerDeploymentReconciled" and
-	// "PolicyServerServiceReconciled"
+	// PolicyServer resource.  Known .status.conditions.types are:
+	// "CertSecretReconciled", "CARootSecretReconciled",
+	// "ConfigMapReconciled", "DeploymentReconciled",
+	// "ServiceReconciled", "PodDisruptionBudgetReconciled" and
+	// "PolicyWebhooksCleanedUp"
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map

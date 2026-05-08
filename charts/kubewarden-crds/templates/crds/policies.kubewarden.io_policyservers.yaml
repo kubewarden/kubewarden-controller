@@ -1782,10 +1782,11 @@ spec:
               conditions:
                 description: |-
                   Conditions represent the observed conditions of the
-                  PolicyServer resource.  Known .status.conditions.types
-                  are: "PolicyServerSecretReconciled",
-                  "PolicyServerDeploymentReconciled" and
-                  "PolicyServerServiceReconciled"
+                  PolicyServer resource.  Known .status.conditions.types are:
+                  "CertSecretReconciled", "CARootSecretReconciled",
+                  "ConfigMapReconciled", "DeploymentReconciled",
+                  "ServiceReconciled", "PodDisruptionBudgetReconciled" and
+                  "PolicyWebhooksCleanedUp"
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
