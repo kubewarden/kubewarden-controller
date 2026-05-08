@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8spoliciesv1 "k8s.io/api/policy/v1"
@@ -1822,90 +1823,96 @@ var _ = Describe("PolicyServer controller", func() {
 				)
 			})
 
-			It("should delete assigned policies", func() {
+			It("should set assigned policies as scheduled and remove their webhook configuration", func() {
+				policy, err := getTestClusterAdmissionPolicy(ctx, policyName)
+				Expect(err).ToNot(HaveOccurred())
+
+				// Manually create the ValidatingWebhookConfiguration to simulate
+				// the policy being active. In envtest there are no running pods so
+				// policies never reach the active status and the webhook is never
+				// created by the controller.
+				webhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: policy.GetUniqueName(),
+						Labels: map[string]string{
+							constants.PartOfLabelKey: constants.PartOfLabelValue,
+						},
+					},
+					Webhooks: []admissionregistrationv1.ValidatingWebhook{
+						{
+							Name:                    policy.GetUniqueName() + ".kubewarden.admission",
+							AdmissionReviewVersions: []string{"v1"},
+							SideEffects: func() *admissionregistrationv1.SideEffectClass {
+								s := admissionregistrationv1.SideEffectClassNone
+								return &s
+							}(),
+							ClientConfig: admissionregistrationv1.WebhookClientConfig{
+								Service: &admissionregistrationv1.ServiceReference{
+									Namespace: deploymentsNamespace,
+									Name:      policyServerName,
+								},
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, webhook)).To(Succeed())
+
 				Expect(
 					k8sClient.Delete(ctx, policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()),
 				).To(Succeed())
 
+				// Policy should transition to scheduled.
 				Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
 					return getTestClusterAdmissionPolicy(ctx, policyName)
+				}, timeout, pollInterval).Should(
+					HaveField("Status.PolicyStatus", Equal(policiesv1.PolicyStatusScheduled)),
+				)
+
+				// The ValidatingWebhookConfiguration must be removed so orphaned
+				// webhooks don't block admission requests.
+				Eventually(func() error {
+					got := admissionregistrationv1.ValidatingWebhookConfiguration{}
+					return k8sClient.Get(ctx, types.NamespacedName{Name: policy.GetUniqueName()}, &got)
+				}, timeout, pollInterval).ShouldNot(Succeed())
+
+				// Once the webhook is gone the PolicyWebhooksCleanedUp condition
+				// must be True and the finalizer must be removed.
+				Eventually(func() (*policiesv1.PolicyServer, error) {
+					return getTestPolicyServer(ctx, policyServerName)
+				}, timeout, pollInterval).Should(And(
+					HaveField("Finalizers", Not(ContainElement(constants.KubewardenFinalizer))),
+					HaveField("Status.Conditions", ContainElement(And(
+						HaveField("Type", string(policiesv1.PolicyServerPolicyWebhooksCleanedUp)),
+						HaveField("Status", metav1.ConditionTrue),
+					))),
+				))
+			})
+
+			It("should not delete assigned policies", func() {
+				Expect(
+					k8sClient.Delete(ctx, policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()),
+				).To(Succeed())
+
+				// No webhook exists so the finalizer should be removed once the
+				// controller confirms there are no outstanding webhook configurations.
+				Eventually(func() (*policiesv1.PolicyServer, error) {
+					return getTestPolicyServer(ctx, policyServerName)
 				}, timeout, pollInterval).ShouldNot(
+					HaveField("Finalizers", ContainElement(constants.KubewardenFinalizer)),
+				)
+
+				// Assigned policies should NOT be deleted by the controller
+				Consistently(func() (*policiesv1.ClusterAdmissionPolicy, error) {
+					return getTestClusterAdmissionPolicy(ctx, policyName)
+				}, "5s", pollInterval).Should(
 					HaveField("DeletionTimestamp", BeNil()),
 				)
 			})
 
-			It("should get its old not domain-qualidied finalizer removed from policies", func() {
-				Eventually(func() error {
-					policy, err := getTestClusterAdmissionPolicy(ctx, policyName)
-					if err != nil {
-						return err
-					}
-					controllerutil.AddFinalizer(policy, constants.KubewardenFinalizerPre114)
-					return k8sClient.Update(ctx, policy)
-				}, timeout, pollInterval).Should(Succeed())
-				Eventually(func() error {
-					policy, err := getTestClusterAdmissionPolicy(ctx, policyName)
-					if err != nil {
-						return err
-					}
-					if controllerutil.ContainsFinalizer(policy, constants.KubewardenFinalizerPre114) {
-						return nil
-					}
-					return errors.New("old finalizer not found")
-				}, timeout, pollInterval).Should(Succeed())
-
-				Expect(
-					k8sClient.Delete(ctx, policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()),
-				).To(Succeed())
-
-				Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
-					return getTestClusterAdmissionPolicy(ctx, policyName)
-				}, timeout, pollInterval).Should(And(
-					HaveField("DeletionTimestamp", Not(BeNil())),
-					HaveField("Finalizers", Not(ContainElement(constants.KubewardenFinalizer))),
-					HaveField("Finalizers", Not(ContainElement(constants.KubewardenFinalizerPre114))),
-					HaveField("Finalizers", ContainElement(integrationTestsFinalizer)),
-				))
-			})
-
-			It("should not delete its managed resources until all the scheduled policies are gone", func() {
-				Expect(
-					k8sClient.Delete(ctx, policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()),
-				).To(Succeed())
-
-				Eventually(func() (*policiesv1.ClusterAdmissionPolicy, error) {
-					return getTestClusterAdmissionPolicy(ctx, policyName)
-				}).Should(And(
-					HaveField("DeletionTimestamp", Not(BeNil())),
-					HaveField("Finalizers", Not(ContainElement(constants.KubewardenFinalizer))),
-					HaveField("Finalizers", ContainElement(integrationTestsFinalizer)),
-				))
-
-				Eventually(func() error {
-					_, err := getTestPolicyServerService(ctx, policyServerName)
-					return err
-				}).Should(Succeed())
-			})
-
 			It(fmt.Sprintf("should get its %q finalizer removed", constants.KubewardenFinalizer), func() {
-				Eventually(func() error {
-					policy, err := getTestClusterAdmissionPolicy(ctx, policyName)
-					if err != nil {
-						return err
-					}
-					controllerutil.RemoveFinalizer(policy, integrationTestsFinalizer)
-					return k8sClient.Update(ctx, policy)
-				}).Should(Succeed())
-
 				Expect(
 					k8sClient.Delete(ctx, policiesv1.NewPolicyServerFactory().WithName(policyServerName).Build()),
 				).To(Succeed())
-
-				// wait for the reconciliation loop of the ClusterAdmissionPolicy to remove the resource
-				Eventually(func() error {
-					_, err := getTestClusterAdmissionPolicy(ctx, policyName)
-					return err
-				}, timeout, pollInterval).ShouldNot(Succeed())
 
 				Eventually(func() (*policiesv1.PolicyServer, error) {
 					return getTestPolicyServer(ctx, policyServerName)
