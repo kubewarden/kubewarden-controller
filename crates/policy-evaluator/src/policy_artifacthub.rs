@@ -387,7 +387,7 @@ fn parse_links(
 
 fn compose_install(oci_url: String) -> String {
     format!(
-        r#"The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
+        r#"The policy can be obtained using [kwctl](https://docs.kubewarden.io/howtos/install-kwctl):
 ```console
 kwctl pull {oci_url}
 ```
@@ -866,7 +866,7 @@ mod tests {
                 "kubewarden/rules": "[]\n",
                 "kubewarden/resources": "Pod, Deployment",
             },
-            "install": r#"The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
+            "install": r#"The policy can be obtained using [kwctl](https://docs.kubewarden.io/howtos/install-kwctl):
 ```console
 kwctl pull ghcr.io/ocirepo/namespace/verify-image-signatures:v0.2.1
 ```
@@ -932,7 +932,7 @@ kwctl scaffold manifest -t ClusterAdmissionPolicy registry://ghcr.io/ocirepo/nam
                 "url": "https://github.com/repo"
             }
             ],
-            "install": r#"The policy can be obtained using [`kwctl`](https://github.com/kubewarden/kwctl):
+            "install": r#"The policy can be obtained using [kwctl](https://docs.kubewarden.io/howtos/install-kwctl):
 ```console
 kwctl pull ghcr.io/ocirepo/namespace/verify-image-signatures:v0.2.1
 ```
