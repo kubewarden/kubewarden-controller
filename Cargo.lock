@@ -680,12 +680,12 @@ dependencies = [
  "regex",
  "semver",
  "serde_json",
- "serde_yaml",
  "thiserror 2.0.18",
  "tracing",
  "tracing-subscriber",
  "url",
  "wasmtime",
+ "yaml_serde",
 ]
 
 [[package]]
@@ -3599,7 +3599,6 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "serde_yaml",
  "sha2 0.11.0",
  "sigstore_protobuf_specs",
  "tar",
@@ -3616,6 +3615,7 @@ dependencies = [
  "url",
  "walrus",
  "wasm-encoder 0.248.0",
+ "yaml_serde",
 ]
 
 [[package]]
@@ -3692,6 +3692,12 @@ checksum = "e02f3bb43d335493c96bf3fd3a321600bf6bd07ed34bc64118e9293bdffea46c"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "libyaml-rs"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e126dda6f34391ab7b444f9922055facc83c07a910da3eb16f1e4d9c45dc777"
 
 [[package]]
 name = "linux-raw-sys"
@@ -4728,7 +4734,6 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "serde_yaml",
  "serial_test",
  "sha2 0.11.0",
  "tempfile",
@@ -4749,6 +4754,7 @@ dependencies = [
  "wasmtime-provider",
  "wasmtime-wasi",
  "webpki-roots",
+ "yaml_serde",
 ]
 
 [[package]]
@@ -4776,7 +4782,6 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
- "serde_yaml",
  "sha2 0.11.0",
  "sigstore",
  "temp-env",
@@ -4789,6 +4794,7 @@ dependencies = [
  "url",
  "walkdir",
  "x509-parser",
+ "yaml_serde",
 ]
 
 [[package]]
@@ -4830,7 +4836,6 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "serde_yaml",
  "serial_test",
  "sha2 0.11.0",
  "sigstore_protobuf_specs",
@@ -4846,6 +4851,7 @@ dependencies = [
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",
+ "yaml_serde",
 ]
 
 [[package]]
@@ -8886,6 +8892,19 @@ checksum = "32e45ad4206f6d2479085147f02bc2ef834ac85886624a23575ae137c8aa8156"
 dependencies = [
  "libc",
  "rustix 1.1.4",
+]
+
+[[package]]
+name = "yaml_serde"
+version = "0.10.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08c7c1b1a6a7c8a6b2741a6c21a4f8918e51899b111cfa08d1288202656e3975"
+dependencies = [
+ "indexmap 2.14.0",
+ "itoa",
+ "libyaml-rs",
+ "ryu",
+ "serde",
 ]
 
 [[package]]
