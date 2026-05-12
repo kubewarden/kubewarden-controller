@@ -1893,6 +1893,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "docker_credential"
+version = "1.3.3"
+source = "git+https://github.com/flavio/docker_credential.git?branch=fix-handle-config-without-auth-field#b3b60f5c8df32a439badc76d8610a88878c56597"
+dependencies = [
+ "base64 0.22.1",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "document-features"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4760,7 +4770,7 @@ dependencies = [
  "base64 0.22.1",
  "cfg-if",
  "directories",
- "docker_credential",
+ "docker_credential 1.3.3 (git+https://github.com/flavio/docker_credential.git?branch=fix-handle-config-without-auth-field)",
  "futures",
  "hex",
  "lazy_static",
@@ -6819,7 +6829,7 @@ dependencies = [
  "bollard",
  "bytes",
  "conquer-once",
- "docker_credential",
+ "docker_credential 1.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "either",
  "etcetera",
  "ferroid",
