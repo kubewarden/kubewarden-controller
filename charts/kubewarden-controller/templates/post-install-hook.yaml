@@ -3,7 +3,11 @@
 # pod, it cannot find a valid collector configuration. Therefore, it is necessary
 # to recreate the controller pod after the installation. This ensures that the
 # controller pod will have the OTEL collector container.
-{{ if or .Values.telemetry.metrics .Values.telemetry.tracing }}
+# This restart hook is required only for sidecar telemetry mode to mitigate
+# occasional OTel sidecar injection races during install/upgrade.
+# In custom telemetry mode there is no sidecar injection, and forcing a restart
+# can deadlock single-node hostNetwork rollouts due to hostPort conflicts.
+{{ if and (or .Values.telemetry.metrics .Values.telemetry.tracing) (eq .Values.telemetry.mode "sidecar") }}
 apiVersion: batch/v1
 kind: Job
 metadata:
