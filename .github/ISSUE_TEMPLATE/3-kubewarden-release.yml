@@ -28,7 +28,7 @@ body:
         - [ ] Wait for images to be built, so e2e tests can work.
         - [ ] A successful GH release triggers an [update-adm-controller](https://github.com/kubewarden/helm-charts/actions/workflows/update-adm-controller.yaml)
           job run. This opens an automated PR that syncs adm controller charts in [kubewarden/helm-charts](https://github.com/kubewarden/helm-charts) repo.
-        - [ ] Review & merge automated PR on kubewarden/helm-chart repo.
+        - [ ] Review & merge automated PR on kubewarden/helm-charts repo.
         - [ ] chart-releaser releases the charts on Helm chart repo.                                                                       
         - [ ] Write and release the blog post about the release.
           - [ ] Publish posts in Mastodon, Bluesky.
