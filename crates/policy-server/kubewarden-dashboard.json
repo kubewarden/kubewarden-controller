@@ -1082,7 +1082,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (policy_mode) (kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"validate\"})*100/sum(kubewarden_policy_evaluations_total{})",
+          "expr": "sum by (policy_mode) (kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"validate\"})*100/sum by (policy_mode) (kubewarden_policy_evaluations_total{request_origin=\"validate\"})",
           "interval": "",
           "legendFormat": "{{policy_mode}}",
           "range": true,
@@ -1091,7 +1091,7 @@
       ],
       "title": "Request rejection percentage (by policy mode)",
       "type": "stat",
-      "description": "Share of all policy evaluations that rejected the admission request, broken down by the policy's mode. policy_mode=protect is the share that was actually blocked; policy_mode=monitor is the share that would have been blocked in protect mode."
+      "description": "Share of validate admission evaluations that rejected the admission request, broken down by the policy's mode. policy_mode=protect is the share that was actually blocked; policy_mode=monitor is the share that would have been blocked in protect mode."
     },
     {
       "datasource": {
@@ -2480,7 +2480,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (policy_mode) (kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"validate\", policy_name=\"$policy_name\" })*100/sum(kubewarden_policy_evaluations_total{policy_name=\"$policy_name\"})",
+          "expr": "sum by (policy_mode) (kubewarden_policy_evaluations_total{accepted=\"false\",request_origin=\"validate\",policy_name=\"$policy_name\"})*100/sum by (policy_mode) (kubewarden_policy_evaluations_total{request_origin=\"validate\",policy_name=\"$policy_name\"})",
           "interval": "",
           "legendFormat": "{{policy_mode}}",
           "range": true,
@@ -2489,7 +2489,7 @@
       ],
       "title": "$policy_name policy request rejection percentage (by policy mode)",
       "type": "stat",
-      "description": "Share of $policy_name policy evaluations that rejected the admission request, broken down by the policy's mode. policy_mode=protect is the share that was actually blocked; policy_mode=monitor is the share that would have been blocked in protect mode."
+      "description": "Share of $policy_name validate admission evaluations that rejected the admission request, broken down by the policy's mode. policy_mode=protect is the share that was actually blocked; policy_mode=monitor is the share that would have been blocked in protect mode."
     },
     {
       "datasource": {
@@ -2631,7 +2631,6 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Total $policy_name policy evaluations that rejected the admission request, broken down by the policy's mode.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2691,7 +2690,8 @@
         }
       ],
       "title": "Rejected requests by $policy_name policy (by policy mode)",
-      "type": "stat"
+      "type": "stat",
+      "description": "Total $policy_name policy evaluations that rejected the admission request, broken down by the policy's mode."
     },
     {
       "datasource": {
