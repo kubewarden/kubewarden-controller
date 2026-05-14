@@ -1,93 +1,462 @@
 {
-  "$schema": "https://json-schema.org/draft/2019-09/schema",
-  "type": "object",
-  "properties": {
-    "policyServer": {
-      "type": "object",
-      "properties": {
-        "maxUnavailable": {
-          "type": "string",
-          "minLength": 1
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "additionalAnnotations": {
+            "type": "object"
         },
-        "minAvailable": {
-          "type": "string",
-          "minLength": 1
+        "additionalLabels": {
+            "type": "object"
         },
-        "webhookPort": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 65535,
-          "description": "Port for the PolicyServer webhook listener. When omitted, the controller uses the default (8443)."
+        "crdVersion": {
+            "type": "string"
         },
-        "readinessProbePort": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 65535,
-          "description": "Port for the PolicyServer readiness probe. When omitted, the controller uses the default (8081)."
-        },
-        "metricsPort": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 65535,
-          "description": "Port for the PolicyServer metrics endpoint. When omitted, the controller uses the default (8080)."
-        },
-        "affinity": {
-          "type": "object",
-          "description": "Affinity rules for the default PolicyServer. Takes precedence over global.affinity."
-        },
-        "namespacedPoliciesCapabilities": {
-          "description": "Host capability paths allowed for namespaced policies on this PolicyServer. Catch obvious errors",
-          "type": ["array", "null"],
-          "items": {
-            "type": "string",
-            "minLength": 1,
-            "anyOf": [
-              {
-                "description": "Global wildcard",
-                "const": "*"
-              },
-              {
-                "description": "Category wildcard: <category>/*",
-                "pattern": "^[a-z0-9_-]+/\\*$"
-              },
-              {
-                "description": "Sub-category wildcard: <category>/<path...>/*",
-                "pattern": "^[a-z0-9_-]+(/[a-z0-9_-]+)+/\\*$"
-              },
-              {
-                "description": "Fully-qualified capability path: <category>/<path...>",
-                "pattern": "^[a-z0-9_-]+(/[a-z0-9_-]+)+$"
-              }
-            ]
-          }
-        }
-      },
-      "anyOf": [
-        {
-          "oneOf": [
-            {
-              "required": ["minAvailable"]
-            },
-            {
-              "required": ["maxUnavailable"]
+        "global": {
+            "type": "object",
+            "properties": {
+                "affinity": {
+                    "type": "object"
+                },
+                "cattle": {
+                    "type": "object",
+                    "properties": {
+                        "systemDefaultRegistry": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "skipNamespaces": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "tolerations": {
+                    "type": "array"
+                }
             }
-          ]
         },
-        {
-          "not": {
-            "allOf": [
-              {
-                "required": ["minAvailable"]
-              },
-              {
-                "required": ["maxUnavailable"]
-              }
-            ]
-          }
+        "policyServer": {
+            "anyOf": [
+                {
+                    "properties": {
+                        "minAvailable": {
+                            "type": "null"
+                        }
+                    }
+                },
+                {
+                    "properties": {
+                        "maxUnavailable": {
+                            "type": "null"
+                        }
+                    }
+                }
+            ],
+            "properties": {
+                "affinity": {
+                    "description": "Affinity rules for the default PolicyServer. Takes precedence over global.affinity.",
+                    "type": "object"
+                },
+                "annotations": {
+                    "type": "object"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "env": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "value": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "image": {
+                    "type": "object",
+                    "properties": {
+                        "repository": {
+                            "type": "string"
+                        },
+                        "tag": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "imagePullSecret": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "insecureSources": {
+                    "type": [
+                        "array",
+                        "null"
+                    ],
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "limits": {
+                    "type": "object"
+                },
+                "maxUnavailable": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "minLength": 1
+                },
+                "metricsPort": {
+                    "description": "Port for the PolicyServer metrics endpoint. When omitted, the controller uses the default (8080).",
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "maximum": 65535,
+                    "minimum": 1
+                },
+                "minAvailable": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "minLength": 1
+                },
+                "namespacedPoliciesCapabilities": {
+                    "description": "Host capability paths allowed for namespaced policies on this PolicyServer. Catch obvious errors.",
+                    "type": [
+                        "array",
+                        "null"
+                    ],
+                    "items": {
+                        "$ref": "#/$defs/namespacedPoliciesCapabilitiesItem.schema.json",
+                        "type": "string"
+                    }
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "apiGroup": {
+                                "type": "string"
+                            },
+                            "resources": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "verbs": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                },
+                "readinessProbePort": {
+                    "description": "Port for the PolicyServer readiness probe. When omitted, the controller uses the default (8081).",
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "maximum": 65535,
+                    "minimum": 1
+                },
+                "replicaCount": {
+                    "type": "integer"
+                },
+                "requests": {
+                    "type": "object"
+                },
+                "securityContexts": {
+                    "type": "object"
+                },
+                "serviceAccountName": {
+                    "type": "string"
+                },
+                "sourceAuthorities": {
+                    "type": "object"
+                },
+                "webhookPort": {
+                    "description": "Port for the PolicyServer webhook listener. When omitted, the controller uses the default (8443).",
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "maximum": 65535,
+                    "minimum": 1
+                }
+            }
+        },
+        "recommendedPolicies": {
+            "type": "object",
+            "properties": {
+                "allowPrivilegeEscalationPolicy": {
+                    "type": "object",
+                    "properties": {
+                        "module": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {
+                                    "type": "string"
+                                },
+                                "tag": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "settings": {
+                            "type": "object",
+                            "properties": {
+                                "allowPrivilegeEscalation": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    }
+                },
+                "capabilitiesPolicy": {
+                    "type": "object",
+                    "properties": {
+                        "module": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {
+                                    "type": "string"
+                                },
+                                "tag": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "settings": {
+                            "type": "object",
+                            "properties": {
+                                "allowed_capabilities": {
+                                    "type": "array"
+                                },
+                                "default_add_capabilities": {
+                                    "type": "array"
+                                },
+                                "required_drop_capabilities": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "defaultPoliciesRegistry": {
+                    "type": "string"
+                },
+                "defaultPolicyMode": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "hostNamespacePolicy": {
+                    "type": "object",
+                    "properties": {
+                        "module": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {
+                                    "type": "string"
+                                },
+                                "tag": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "settings": {
+                            "type": "object",
+                            "properties": {
+                                "allow_host_ipc": {
+                                    "type": "boolean"
+                                },
+                                "allow_host_network": {
+                                    "type": "boolean"
+                                },
+                                "allow_host_pid": {
+                                    "type": "boolean"
+                                },
+                                "allow_host_ports": {
+                                    "type": "array"
+                                }
+                            }
+                        }
+                    }
+                },
+                "hostPathsPolicy": {
+                    "type": "object",
+                    "properties": {
+                        "module": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {
+                                    "type": "string"
+                                },
+                                "tag": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "settings": {
+                            "type": "object",
+                            "properties": {
+                                "allowedHostPaths": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "pathPrefix": {
+                                                "type": "string"
+                                            },
+                                            "readOnly": {
+                                                "type": "boolean"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "podPrivilegedPolicy": {
+                    "type": "object",
+                    "properties": {
+                        "module": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {
+                                    "type": "string"
+                                },
+                                "tag": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "settings": {
+                            "type": "object",
+                            "properties": {
+                                "skip_ephemeral_containers": {
+                                    "type": "boolean"
+                                },
+                                "skip_init_containers": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    }
+                },
+                "skipAdditionalNamespaces": {
+                    "type": "array"
+                },
+                "userGroupPolicy": {
+                    "type": "object",
+                    "properties": {
+                        "module": {
+                            "type": "object",
+                            "properties": {
+                                "repository": {
+                                    "type": "string"
+                                },
+                                "tag": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "settings": {
+                            "type": "object",
+                            "properties": {
+                                "run_as_group": {
+                                    "type": "object",
+                                    "properties": {
+                                        "rule": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "run_as_user": {
+                                    "type": "object",
+                                    "properties": {
+                                        "rule": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "supplemental_groups": {
+                                    "type": "object",
+                                    "properties": {
+                                        "rule": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "validate_container_image_configuration": {
+                                    "type": "boolean"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-      ],
-      "additionalProperties": true
+    },
+    "$defs": {
+        "namespacedPoliciesCapabilitiesItem.schema.json": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "anyOf": [
+                {
+                    "description": "Global wildcard",
+                    "const": "*"
+                },
+                {
+                    "description": "Category wildcard: \u003ccategory\u003e/*",
+                    "pattern": "^[a-z0-9_-]+/\\*$"
+                },
+                {
+                    "description": "Sub-category wildcard: \u003ccategory\u003e/\u003cpath...\u003e/*",
+                    "pattern": "^[a-z0-9_-]+(/[a-z0-9_-]+)+/\\*$"
+                },
+                {
+                    "description": "Fully-qualified capability path: \u003ccategory\u003e/\u003cpath...\u003e",
+                    "pattern": "^[a-z0-9_-]+(/[a-z0-9_-]+)+$"
+                }
+            ],
+            "minLength": 1
+        }
     }
-  },
-  "additionalProperties": true
 }

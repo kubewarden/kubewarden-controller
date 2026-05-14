@@ -24,3 +24,6 @@
 
 # dev files
 chart-values.yaml
+
+# schema fragments bundled into values.schema.json at generation time
+schemas/

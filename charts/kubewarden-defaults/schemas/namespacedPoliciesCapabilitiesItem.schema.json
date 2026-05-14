@@ -1,0 +1,23 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "minLength": 1,
+    "anyOf": [
+        {
+            "description": "Global wildcard",
+            "const": "*"
+        },
+        {
+            "description": "Category wildcard: <category>/*",
+            "pattern": "^[a-z0-9_-]+/\\*$"
+        },
+        {
+            "description": "Sub-category wildcard: <category>/<path...>/*",
+            "pattern": "^[a-z0-9_-]+(/[a-z0-9_-]+)+/\\*$"
+        },
+        {
+            "description": "Fully-qualified capability path: <category>/<path...>",
+            "pattern": "^[a-z0-9_-]+(/[a-z0-9_-]+)+$"
+        }
+    ]
+}

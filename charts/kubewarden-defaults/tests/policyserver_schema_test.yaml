@@ -1,0 +1,82 @@
+suite: policyServer values schema validation
+templates:
+  - policyserver-default.yaml
+tests:
+  # --- minAvailable / maxUnavailable disjunction ---
+  - it: "should accept default (both minAvailable and maxUnavailable unset)"
+    asserts:
+      - notExists:
+          path: spec.minAvailable
+      - notExists:
+          path: spec.maxUnavailable
+
+  - it: "should accept minAvailable on its own"
+    set:
+      policyServer.minAvailable: "30%"
+    asserts:
+      - equal:
+          path: spec.minAvailable
+          value: "30%"
+      - notExists:
+          path: spec.maxUnavailable
+
+  - it: "should accept maxUnavailable on its own"
+    set:
+      policyServer.maxUnavailable: "50%"
+    asserts:
+      - equal:
+          path: spec.maxUnavailable
+          value: "50%"
+      - notExists:
+          path: spec.minAvailable
+
+  - it: "should reject minAvailable and maxUnavailable set together"
+    set:
+      policyServer.minAvailable: "30%"
+      policyServer.maxUnavailable: "50%"
+    asserts:
+      - failedTemplate:
+          errorPattern: "anyOf"
+
+  - it: "should reject an empty minAvailable string"
+    set:
+      policyServer.minAvailable: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "minAvailable"
+
+  - it: "should reject an empty maxUnavailable string"
+    set:
+      policyServer.maxUnavailable: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "maxUnavailable"
+
+  # --- Port range validation ---
+  - it: "should reject webhookPort below 1"
+    set:
+      policyServer.webhookPort: 0
+    asserts:
+      - failedTemplate:
+          errorPattern: "webhookPort"
+
+  - it: "should reject webhookPort above 65535"
+    set:
+      policyServer.webhookPort: 70000
+    asserts:
+      - failedTemplate:
+          errorPattern: "webhookPort"
+
+  - it: "should reject readinessProbePort out of range"
+    set:
+      policyServer.readinessProbePort: 0
+    asserts:
+      - failedTemplate:
+          errorPattern: "readinessProbePort"
+
+  - it: "should reject metricsPort out of range"
+    set:
+      policyServer.metricsPort: 65536
+    asserts:
+      - failedTemplate:
+          errorPattern: "metricsPort"

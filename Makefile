@@ -171,8 +171,9 @@ manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefin
 	sed -i 's/  namespace: kubewarden/  namespace: {{ .Release.Namespace }}/' charts/kubewarden-controller/templates/controller-rbac-roles.yaml
 
 .PHONY: generate-chart
-generate-chart: ## Generate Helm chart values schema.
+generate-chart: ## Generate Helm chart values schemas.
 	$(HELM_SCHEMA) --values charts/kubewarden-controller/values.yaml --output charts/kubewarden-controller/values.schema.json
+	cd charts/kubewarden-defaults && $(HELM_SCHEMA) --bundle --bundle-without-id --values values.yaml --output values.schema.json
 
 .PHONY: check-generate
 check-generate: generate

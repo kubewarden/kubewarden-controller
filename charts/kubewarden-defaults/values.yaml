@@ -110,12 +110,15 @@ additionalLabels: {}
 additionalAnnotations: {}
 # owner: IT-group1
 # Policy Server settings
+# @schema anyOf: [{properties: {minAvailable: {type: "null"}}}, {properties: {maxUnavailable: {type: "null"}}}]
 policyServer:
   enabled: true
   replicaCount: 1
   # Only one of minAvailable,maxUnavailable can be enabled:
   # minAvailable: 30%
   # maxUnavailable: 1
+  minAvailable: null # @schema type:[string,null]; minLength:1
+  maxUnavailable: null # @schema type:[string,null]; minLength:1
   image:
     # The registry is defined in the global.cattle.systemDefaultRegistry value
     repository: "kubewarden/adm-controller/policy-server"
@@ -159,14 +162,14 @@ policyServer:
   #
   # Example of usage:
   # imagePullSecret: "mysecret"
-  imagePullSecret: null
+  imagePullSecret: null # @schema type:[string,null]
   # insecureSources stores a list of allowed insecure registries.
   #
   # Example of usage:
   #insecureSources:
   #  - "source1"
   #  - "source2"
-  insecureSources: null
+  insecureSources: null # @schema type:[array,null]; item: string
   # sourceAuthorities is a list of the URIs and their PEM encoded certificates
   # used to authenticate them
   #
@@ -191,6 +194,7 @@ policyServer:
   # namespacedPoliciesCapabilities:
   #   - "oci/*"
   #   - "net/v1/dns_lookup_host"
+  # @schema type:[array,null]; description: Host capability paths allowed for namespaced policies on this PolicyServer. Catch obvious errors.; itemRef: schemas/namespacedPoliciesCapabilitiesItem.schema.json
   namespacedPoliciesCapabilities:
     - "*" # all host capabilities are granted
   # limits and requests, see https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
@@ -205,11 +209,10 @@ policyServer:
   # - webhookPort: 8443
   # - readinessProbePort: 8081
   # - metricsPort: default value defined in the controller (8080)
-  #
-  # webhookPort: 9443
-  # readinessProbePort: 9081
-  # metricsPort: 9080
-  
+  webhookPort: null # @schema type:[integer,null]; minimum:1; maximum:65535; description: Port for the PolicyServer webhook listener. When omitted, the controller uses the default (8443).
+  readinessProbePort: null # @schema type:[integer,null]; minimum:1; maximum:65535; description: Port for the PolicyServer readiness probe. When omitted, the controller uses the default (8081).
+  metricsPort: null # @schema type:[integer,null]; minimum:1; maximum:65535; description: Port for the PolicyServer metrics endpoint. When omitted, the controller uses the default (8080).
+
   # affinity configures affinity rules for the default PolicyServer.
   # This takes precedence over global.affinity when set.
   # When hostNetwork is enabled, users should set appropriate podAntiAffinity
@@ -221,7 +224,7 @@ policyServer:
   #         matchLabels:
   #           kubewarden/policy-server: default
   #       topologyKey: kubernetes.io/hostname
-  affinity: {}
+  affinity: {} # @schema description: Affinity rules for the default PolicyServer. Takes precedence over global.affinity.
 crdVersion: "policies.kubewarden.io/v1"
 recommendedPolicies:
   enabled: False
