@@ -20,6 +20,9 @@ use tracing::warn;
 use crate::scaffold::kubewarden_crds::{
     AdmissionPolicy, AdmissionPolicySpec, ClusterAdmissionPolicy, ClusterAdmissionPolicySpec,
 };
+use crate::scaffold::resource_scope::{
+    AdmissionPolicyScopeFindings, classify_admission_policy_rules,
+};
 
 pub(crate) enum ManifestType {
     ClusterAdmissionPolicy,
@@ -228,10 +231,61 @@ fn generate_yaml_resource(
                 .map_err(|e| anyhow!("{}", e))
         }
         ManifestType::AdmissionPolicy => {
+            check_admission_policy_target_scope(&classify_admission_policy_rules(
+                &scaffold_data.metadata.rules,
+            ))?;
+
             serde_yaml::to_value(AdmissionPolicy::try_from(scaffold_data)?)
                 .map_err(|e| anyhow!("{}", e))
         }
     }
+}
+
+/// Reject scaffolding an `AdmissionPolicy` whose rules target a known
+/// cluster-scoped Kubernetes resource (the cluster would never deliver matching
+/// requests to a namespaced policy), and warn for unknown resources where the
+/// scope cannot be determined statically (most commonly Custom Resource
+/// Definitions, or rules using wildcards).
+fn check_admission_policy_target_scope(findings: &AdmissionPolicyScopeFindings) -> Result<()> {
+    if findings.has_cluster_scoped() {
+        let formatted = findings
+            .cluster_scoped
+            .iter()
+            .map(|(group, resource)| {
+                if group.is_empty() {
+                    resource.clone()
+                } else {
+                    format!("{}/{}", group, resource)
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        return Err(anyhow!(
+            "AdmissionPolicy cannot target cluster-wide resources, but the policy's rules target: {}. \
+             AdmissionPolicy is a namespaced resource: the cluster only invokes it for namespaced \
+             requests. Scaffold a ClusterAdmissionPolicy instead by passing `--type ClusterAdmissionPolicy`.",
+            formatted
+        ));
+    }
+
+    if findings.has_unknown() {
+        for (group, resource) in &findings.unknown {
+            let target = if group.is_empty() {
+                resource.clone()
+            } else {
+                format!("{}/{}", group, resource)
+            };
+            warn!(
+                "Cannot determine whether `{}` is namespaced or cluster-wide. If it is cluster-wide, \
+                 this AdmissionPolicy will never be invoked. Verify the resource scope with \
+                 `kubectl api-resources` and, if needed, scaffold a ClusterAdmissionPolicy instead.",
+                target
+            );
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -504,5 +558,95 @@ mod tests {
 
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Invalid title"));
+    }
+
+    fn admission_policy_scaffold_data_with_rules(
+        rules: Vec<policy_evaluator::policy_metadata::Rule>,
+    ) -> ScaffoldPolicyData {
+        let mut metadata = mock_metadata_with_title("test");
+        metadata.protocol_version = Some(policy_evaluator::ProtocolVersion::V1);
+        metadata.rules = rules;
+        ScaffoldPolicyData {
+            uri: "not_relevant".to_string(),
+            policy_title: get_policy_title_from_cli_or_metadata(Some("test"), &metadata),
+            metadata,
+            settings: Default::default(),
+        }
+    }
+
+    fn rule(api_groups: &[&str], resources: &[&str]) -> policy_evaluator::policy_metadata::Rule {
+        use policy_evaluator::policy_metadata::{Operation, Rule};
+        Rule {
+            api_groups: api_groups.iter().map(|s| s.to_string()).collect(),
+            api_versions: vec!["v1".to_string()],
+            resources: resources.iter().map(|s| s.to_string()).collect(),
+            operations: vec![Operation::Create],
+        }
+    }
+
+    #[test]
+    fn scaffold_admission_policy_targeting_namespaced_resource_succeeds() {
+        let scaffold_data = admission_policy_scaffold_data_with_rules(vec![rule(&[""], &["pods"])]);
+        let result = generate_yaml_resource(scaffold_data, ManifestType::AdmissionPolicy, false);
+        assert!(
+            result.is_ok(),
+            "scaffolding an AdmissionPolicy that targets a namespaced resource should succeed, got: {:?}",
+            result.err()
+        );
+    }
+
+    #[test]
+    fn scaffold_admission_policy_targeting_core_cluster_scoped_resource_errors_out() {
+        let scaffold_data =
+            admission_policy_scaffold_data_with_rules(vec![rule(&[""], &["namespaces"])]);
+        let result = generate_yaml_resource(scaffold_data, ManifestType::AdmissionPolicy, false);
+        let err = result.expect_err("scaffold should refuse cluster-scoped target");
+        let message = err.to_string();
+        assert!(
+            message.contains("cluster-wide resources"),
+            "error message should mention cluster-wide resources, got: {}",
+            message
+        );
+        assert!(
+            message.contains("namespaces"),
+            "error message should mention the offending resource, got: {}",
+            message
+        );
+        assert!(
+            message.contains("ClusterAdmissionPolicy"),
+            "error message should point the user at ClusterAdmissionPolicy, got: {}",
+            message
+        );
+    }
+
+    #[test]
+    fn scaffold_admission_policy_targeting_named_group_cluster_scoped_resource_errors_out() {
+        let scaffold_data = admission_policy_scaffold_data_with_rules(vec![rule(
+            &["storage.k8s.io"],
+            &["storageclasses"],
+        )]);
+        let result = generate_yaml_resource(scaffold_data, ManifestType::AdmissionPolicy, false);
+        let err = result.expect_err("scaffold should refuse cluster-scoped target");
+        assert!(err.to_string().contains("storage.k8s.io/storageclasses"));
+    }
+
+    #[test]
+    fn scaffold_admission_policy_targeting_custom_resource_succeeds_with_warning() {
+        // Cannot statically check the test logger output here, but the function
+        // must return Ok and the warning is exercised by the integration tests.
+        let scaffold_data =
+            admission_policy_scaffold_data_with_rules(vec![rule(&["example.com"], &["widgets"])]);
+        let result = generate_yaml_resource(scaffold_data, ManifestType::AdmissionPolicy, false);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn scaffold_cluster_admission_policy_targeting_cluster_scoped_resource_is_unaffected() {
+        let scaffold_data =
+            admission_policy_scaffold_data_with_rules(vec![rule(&[""], &["namespaces"])]);
+        // ClusterAdmissionPolicy is allowed to target cluster-scoped resources.
+        let result =
+            generate_yaml_resource(scaffold_data, ManifestType::ClusterAdmissionPolicy, false);
+        assert!(result.is_ok());
     }
 }
