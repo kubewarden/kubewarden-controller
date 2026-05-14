@@ -3,6 +3,8 @@
 //! cluster-scoped resources (an `AdmissionPolicy` is namespaced, and a
 //! cluster-scoped target would never be evaluated against it).
 
+use std::collections::BTreeSet;
+
 use policy_evaluator::policy_metadata::Rule;
 
 /// Resource API group and plural pair, used as a key into the built-in
@@ -69,6 +71,24 @@ const CLUSTER_SCOPED_RESOURCES: &[ResourceKey] = &[
     ResourceKey {
         api_group: "apiregistration.k8s.io",
         resource: "apiservices",
+    },
+    // authentication.k8s.io
+    ResourceKey {
+        api_group: "authentication.k8s.io",
+        resource: "tokenreviews",
+    },
+    // authorization.k8s.io
+    ResourceKey {
+        api_group: "authorization.k8s.io",
+        resource: "selfsubjectaccessreviews",
+    },
+    ResourceKey {
+        api_group: "authorization.k8s.io",
+        resource: "selfsubjectrulesreviews",
+    },
+    ResourceKey {
+        api_group: "authorization.k8s.io",
+        resource: "subjectaccessreviews",
     },
     // certificates.k8s.io
     ResourceKey {
@@ -209,7 +229,8 @@ impl AdmissionPolicyScopeFindings {
 }
 
 pub(crate) fn classify_admission_policy_rules(rules: &[Rule]) -> AdmissionPolicyScopeFindings {
-    let mut findings = AdmissionPolicyScopeFindings::default();
+    let mut cluster_scoped = BTreeSet::new();
+    let mut unknown = BTreeSet::new();
 
     for rule in rules {
         for api_group in &rule.api_groups {
@@ -218,21 +239,24 @@ pub(crate) fn classify_admission_policy_rules(rules: &[Rule]) -> AdmissionPolicy
                 let pair = (api_group.clone(), resource.clone());
 
                 if api_group == "*" || base_resource == "*" {
-                    findings.unknown.push(pair);
+                    unknown.insert(pair);
                     continue;
                 }
 
                 if is_known_cluster_scoped(api_group, base_resource) {
-                    findings.cluster_scoped.push(pair);
+                    cluster_scoped.insert(pair);
                 } else if !is_built_in_api_group(api_group) {
-                    findings.unknown.push(pair);
+                    unknown.insert(pair);
                 }
                 // Otherwise it is a known namespaced built-in: nothing to flag.
             }
         }
     }
 
-    findings
+    AdmissionPolicyScopeFindings {
+        cluster_scoped: cluster_scoped.into_iter().collect(),
+        unknown: unknown.into_iter().collect(),
+    }
 }
 
 fn is_known_cluster_scoped(api_group: &str, resource: &str) -> bool {
@@ -292,6 +316,44 @@ mod tests {
     }
 
     #[test]
+    fn authentication_and_authorization_review_resources_are_cluster_scoped() {
+        let rules = vec![
+            rule(&["authentication.k8s.io"], &["tokenreviews"]),
+            rule(
+                &["authorization.k8s.io"],
+                &[
+                    "selfsubjectaccessreviews",
+                    "selfsubjectrulesreviews",
+                    "subjectaccessreviews",
+                ],
+            ),
+        ];
+        let findings = classify_admission_policy_rules(&rules);
+        assert_eq!(
+            findings.cluster_scoped,
+            vec![
+                (
+                    "authentication.k8s.io".to_string(),
+                    "tokenreviews".to_string()
+                ),
+                (
+                    "authorization.k8s.io".to_string(),
+                    "selfsubjectaccessreviews".to_string()
+                ),
+                (
+                    "authorization.k8s.io".to_string(),
+                    "selfsubjectrulesreviews".to_string()
+                ),
+                (
+                    "authorization.k8s.io".to_string(),
+                    "subjectaccessreviews".to_string()
+                ),
+            ]
+        );
+        assert!(findings.unknown.is_empty());
+    }
+
+    #[test]
     fn custom_resource_is_classified_as_unknown() {
         let rules = vec![rule(&["example.com"], &["widgets"])];
         let findings = classify_admission_policy_rules(&rules);
@@ -346,6 +408,28 @@ mod tests {
             rule(&["example.com"], &["widgets"]),           // unknown (CRD)
             rule(&["storage.k8s.io"], &["storageclasses"]), // cluster-scoped built-in
             rule(&["apps"], &["statefulsets"]),             // namespaced built-in
+        ];
+        let findings = classify_admission_policy_rules(&rules);
+        assert_eq!(
+            findings.cluster_scoped,
+            vec![
+                ("".to_string(), "namespaces".to_string()),
+                ("storage.k8s.io".to_string(), "storageclasses".to_string()),
+            ]
+        );
+        assert_eq!(
+            findings.unknown,
+            vec![("example.com".to_string(), "widgets".to_string())]
+        );
+    }
+
+    #[test]
+    fn duplicate_findings_are_deduplicated_and_sorted() {
+        let rules = vec![
+            rule(&["storage.k8s.io"], &["storageclasses"]),
+            rule(&["storage.k8s.io"], &["storageclasses"]),
+            rule(&["example.com"], &["widgets", "widgets"]),
+            rule(&[""], &["namespaces", "namespaces"]),
         ];
         let findings = classify_admission_policy_rules(&rules);
         assert_eq!(

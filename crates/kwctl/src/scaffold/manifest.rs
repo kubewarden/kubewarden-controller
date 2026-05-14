@@ -292,7 +292,53 @@ fn check_admission_policy_target_scope(findings: &AdmissionPolicyScopeFindings) 
 mod tests {
     use super::*;
 
+    use std::sync::{Arc, Mutex};
+
     use policy_evaluator::policy_metadata::ContextAwareResource;
+    use tracing::{Event, Level, Subscriber, field};
+    use tracing_subscriber::{Layer, layer::Context, layer::SubscriberExt, registry::LookupSpan};
+
+    #[derive(Clone, Default)]
+    struct CapturedWarnings {
+        messages: Arc<Mutex<Vec<String>>>,
+    }
+
+    impl<S> Layer<S> for CapturedWarnings
+    where
+        S: Subscriber + for<'a> LookupSpan<'a>,
+    {
+        fn on_event(&self, event: &Event<'_>, _ctx: Context<'_, S>) {
+            if *event.metadata().level() != Level::WARN {
+                return;
+            }
+
+            let mut visitor = WarningMessageVisitor::default();
+            event.record(&mut visitor);
+            self.messages
+                .lock()
+                .expect("captured warning mutex should not be poisoned")
+                .push(visitor.message);
+        }
+    }
+
+    #[derive(Default)]
+    struct WarningMessageVisitor {
+        message: String,
+    }
+
+    impl field::Visit for WarningMessageVisitor {
+        fn record_debug(&mut self, field: &field::Field, value: &dyn std::fmt::Debug) {
+            if field.name() == "message" {
+                self.message = format!("{value:?}");
+            }
+        }
+
+        fn record_str(&mut self, field: &field::Field, value: &str) {
+            if field.name() == "message" {
+                self.message = value.to_string();
+            }
+        }
+    }
 
     fn mock_metadata_with_no_annotations() -> Metadata {
         Metadata {
@@ -632,12 +678,22 @@ mod tests {
 
     #[test]
     fn scaffold_admission_policy_targeting_custom_resource_succeeds_with_warning() {
-        // Cannot statically check the test logger output here, but the function
-        // must return Ok and the warning is exercised by the integration tests.
         let scaffold_data =
             admission_policy_scaffold_data_with_rules(vec![rule(&["example.com"], &["widgets"])]);
-        let result = generate_yaml_resource(scaffold_data, ManifestType::AdmissionPolicy, false);
+        let captured_warnings = CapturedWarnings::default();
+        let subscriber = tracing_subscriber::registry().with(captured_warnings.clone());
+        let result = tracing::subscriber::with_default(subscriber, || {
+            generate_yaml_resource(scaffold_data, ManifestType::AdmissionPolicy, false)
+        });
         assert!(result.is_ok());
+
+        let warnings = captured_warnings
+            .messages
+            .lock()
+            .expect("captured warning mutex should not be poisoned");
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].contains("Cannot determine whether `example.com/widgets`"));
+        assert!(warnings[0].contains("ClusterAdmissionPolicy"));
     }
 
     #[test]
