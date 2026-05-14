@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -102,7 +103,7 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
-//nolint:funlen // Avoid splitting the main function in multiple functions to avoid changing the retcode logic for metrics shutdown
+//nolint:funlen,gocognit // Avoid splitting the main function in multiple functions to avoid changing the retcode logic for metrics shutdown
 func main() {
 	retcode := 0
 	defer func() { os.Exit(retcode) }()
@@ -162,6 +163,12 @@ func main() {
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
+	policyServerMetricsPortFlagSet := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "policy-server-metrics-port" {
+			policyServerMetricsPortFlagSet = true
+		}
+	})
 	mgrOpts.EnableMutualTLS = config.ClientCAConfigMapName != ""
 	config.ImagePullSecrets = parseImagePullSecrets(imagePullSecretsFlag)
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
@@ -213,6 +220,41 @@ func main() {
 		return
 	}
 	policyServerMetricsPort := int32(*policyServerMetricsPortFlag)
+	if envPort := os.Getenv(constants.PolicyServerMetricsPortEnvVar); envPort != "" {
+		if policyServerMetricsPortFlagSet {
+			setupLog.Info(
+				"WARNING: deprecated environment variable ignored because --policy-server-metrics-port was set",
+				"envVar", constants.PolicyServerMetricsPortEnvVar,
+				"flag", "--policy-server-metrics-port",
+			)
+		} else {
+			envPortParsed, err := strconv.ParseInt(envPort, 10, 32)
+			if err != nil {
+				setupLog.Error(err, "invalid policy server metrics port environment variable",
+					"envVar", constants.PolicyServerMetricsPortEnvVar, "value", envPort)
+				retcode = 1
+				return
+			}
+			policyServerMetricsPort = int32(envPortParsed)
+			setupLog.Info(
+				"WARNING: deprecated environment variable used as fallback; use --policy-server-metrics-port instead",
+				"envVar", constants.PolicyServerMetricsPortEnvVar,
+				"flag", "--policy-server-metrics-port",
+			)
+		}
+	}
+	if int64(policyServerMetricsPort) < minAllowedPort ||
+		int64(policyServerMetricsPort) > maxAllowedPort {
+		setupLog.Error(
+			errors.New("port must be between 1 and 65535"),
+			"invalid policy server metrics port",
+			"value", policyServerMetricsPort,
+			"min", minAllowedPort,
+			"max", maxAllowedPort,
+		)
+		retcode = 1
+		return
+	}
 
 	if enableMetrics {
 		shutdown, err := metrics.New()

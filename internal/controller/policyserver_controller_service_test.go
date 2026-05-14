@@ -72,7 +72,7 @@ func findServicePort(ports []corev1.ServicePort, name string) *corev1.ServicePor
 // TestUpdateServiceMetricsPortPriorityChain validates the 3-tier priority
 // chain for the metrics Service Port:
 //
-//	CRD field (spec.metricsPort) > --policy-server-metrics-port CLI flag > constant (8080)
+//	CRD field (spec.metricsPort) > --policy-server-metrics-port CLI flag > deprecated env var > constant (8080)
 //
 // It also verifies that the Service TargetPort is always fixed at the
 // controller-wide PolicyServerMetricsPort regardless of any CRD override.
@@ -87,7 +87,7 @@ func TestUpdateServiceMetricsPortPriorityChain(t *testing.T) {
 	tests := []struct {
 		name                   string
 		metricsEnabled         bool
-		policyServerMetricPort int32 // simulates --policy-server-metrics-port CLI flag / constant
+		policyServerMetricPort int32 // simulates controller-wide CLI flag / env var / constant
 		crdMetricsPort         *int32
 		expectMetricsPort      bool
 		expectedPort           int32 // Service Port

@@ -12,6 +12,7 @@ const (
 	PolicyServerDeploymentPodSpecConfigVersionLabel = "kubewarden/config-version"
 	PolicyServerListenPort                          = 8443
 	PolicyServerServicePort                         = 443
+	PolicyServerMetricsPortEnvVar                   = "KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT"
 	PolicyServerMetricsPort                         = 8080
 	PolicyServerReadinessProbePort                  = 8081
 	PolicyServerReadinessProbe                      = "/readiness"
