@@ -87,6 +87,10 @@ func (r *AdmissionPolicyGroupReconciler) SetupWithManager(mgr ctrl.Manager) erro
 			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPoliciesForPod),
 		).
 		Watches(
+			&policiesv1.PolicyServer{},
+			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPolicyGroupsForPolicyServer),
+		).
+		Watches(
 			&admissionregistrationv1.ValidatingWebhookConfiguration{},
 			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPolicyForWebhookConfiguration),
 		).
@@ -100,6 +104,10 @@ func (r *AdmissionPolicyGroupReconciler) SetupWithManager(mgr ctrl.Manager) erro
 
 func (r *AdmissionPolicyGroupReconciler) findAdmissionPoliciesForPod(ctx context.Context, object client.Object) []reconcile.Request {
 	return findPoliciesForPod(ctx, r.Client, object)
+}
+
+func (r *AdmissionPolicyGroupReconciler) findAdmissionPolicyGroupsForPolicyServer(ctx context.Context, object client.Object) []reconcile.Request {
+	return findAdmissionPolicyGroupsForPolicyServer(ctx, r.Client, object)
 }
 
 func (r *AdmissionPolicyGroupReconciler) findAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {

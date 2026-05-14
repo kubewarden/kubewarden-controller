@@ -87,6 +87,10 @@ func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) er
 			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPod),
 		).
 		Watches(
+			&policiesv1.PolicyServer{},
+			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPoliciesForPolicyServer),
+		).
+		Watches(
 			&admissionregistrationv1.ValidatingWebhookConfiguration{},
 			handler.EnqueueRequestsFromMapFunc(r.findClusterAdmissionPolicyForWebhookConfiguration),
 		).
@@ -103,6 +107,10 @@ func (r *ClusterAdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) er
 
 func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPod(ctx context.Context, object client.Object) []reconcile.Request {
 	return findClusterPoliciesForPod(ctx, r.Client, object)
+}
+
+func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPoliciesForPolicyServer(ctx context.Context, object client.Object) []reconcile.Request {
+	return findClusterAdmissionPoliciesForPolicyServer(ctx, r.Client, object)
 }
 
 func (r *ClusterAdmissionPolicyReconciler) findClusterAdmissionPolicyForWebhookConfiguration(_ context.Context, webhookConfiguration client.Object) []reconcile.Request {
