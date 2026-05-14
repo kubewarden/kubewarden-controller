@@ -37,10 +37,9 @@ tests:
           content:
             --opentelemetry-client-certificate-secret=my-client-cert
       - notContains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.containers[0].args
           content:
-            name: KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT
-            value: "8080"
+            --policy-server-metrics-port=8080
       - contains:
           path: spec.template.spec.containers[0].env
           content:
@@ -138,10 +137,9 @@ tests:
           content:
             --opentelemetry-client-certificate-secret=
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.containers[0].args
           content:
-            name: KUBEWARDEN_POLICY_SERVER_SERVICES_METRICS_PORT
-            value: "8080"
+            --policy-server-metrics-port=8080
       - contains:
           path: spec.template.spec.containers[0].env
           content:

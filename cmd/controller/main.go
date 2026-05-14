@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -103,7 +102,7 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
-//nolint:funlen,gocognit // Avoid splitting the main function in multiple functions to avoid changing the retcode logic for metrics shutdown
+//nolint:funlen // Avoid splitting the main function in multiple functions to avoid changing the retcode logic for metrics shutdown
 func main() {
 	retcode := 0
 	defer func() { os.Exit(retcode) }()
@@ -120,6 +119,10 @@ func main() {
 	flag.StringVar(&mgrOpts.MetricsAddr, "metrics-bind-address", ":8088", "The address the controller-runtime metric endpoint binds to.")
 	flag.StringVar(&mgrOpts.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.IntVar(&mgrOpts.WebhookServerPort, "webhook-server-port", 9443, "The port the webhook server listens on.")
+	policyServerMetricsPortFlag := flag.Int("policy-server-metrics-port",
+		constants.PolicyServerMetricsPort,
+		"The default port exposed by every PolicyServer metrics Service. "+
+			"Per-PolicyServer overrides (spec.metricsPort) always take priority.")
 	flag.BoolVar(&mgrOpts.EnableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -195,31 +198,21 @@ func main() {
 			"Use only when the Kubernetes API server cannot reach pod-network webhook endpoints.")
 	}
 
-	// Read the global default metrics port for PolicyServer services from the
-	// environment variable, falling back to the hardcoded constant.
-	policyServerMetricsPort := int32(constants.PolicyServerMetricsPort)
-	if envPort := os.Getenv(constants.PolicyServerMetricsPortEnvVar); envPort != "" {
-		parsed, err := strconv.ParseInt(envPort, 10, 32)
-		if err != nil {
-			setupLog.Error(err, "cannot parse env var as integer port",
-				"envVar", constants.PolicyServerMetricsPortEnvVar, "value", envPort)
-			retcode = 1
-			return
-		}
-		if parsed < minAllowedPort || parsed > maxAllowedPort {
-			setupLog.Error(
-				errors.New("port must be between 1 and 65535"),
-				"invalid env var port value",
-				"envVar", constants.PolicyServerMetricsPortEnvVar,
-				"value", envPort,
-				"min", minAllowedPort,
-				"max", maxAllowedPort,
-			)
-			retcode = 1
-			return
-		}
-		policyServerMetricsPort = int32(parsed)
+	// Validate --policy-server-metrics-port range.
+	if int64(*policyServerMetricsPortFlag) < minAllowedPort ||
+		int64(*policyServerMetricsPortFlag) > maxAllowedPort {
+		setupLog.Error(
+			errors.New("port must be between 1 and 65535"),
+			"invalid policy server metrics port",
+			"flag", "--policy-server-metrics-port",
+			"value", *policyServerMetricsPortFlag,
+			"min", minAllowedPort,
+			"max", maxAllowedPort,
+		)
+		retcode = 1
+		return
 	}
+	policyServerMetricsPort := int32(*policyServerMetricsPortFlag)
 
 	if enableMetrics {
 		shutdown, err := metrics.New()
