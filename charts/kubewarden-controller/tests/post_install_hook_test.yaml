@@ -1,0 +1,44 @@
+suite: post-install hook rendering
+templates:
+  - post-install-hook.yaml
+tests:
+  - it: "should render post-install hook for sidecar telemetry"
+    set:
+      telemetry:
+        mode: sidecar
+        metrics: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: post-install,post-upgrade
+      - equal:
+          path: spec.template.spec.containers[0].command[0]
+          value: kubectl
+      - equal:
+          path: spec.template.spec.containers[0].command[4]
+          value: restart
+
+  - it: "should not render post-install hook for custom telemetry"
+    set:
+      telemetry:
+        mode: custom
+        metrics: true
+        tracing: true
+        custom:
+          endpoint: "http://my-collector-collector.kubewarden.svc:4317"
+          insecure: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: "should not render post-install hook when telemetry is disabled"
+    set:
+      telemetry:
+        mode: sidecar
+        metrics: false
+        tracing: false
+    asserts:
+      - hasDocuments:
+          count: 0
