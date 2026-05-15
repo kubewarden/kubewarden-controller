@@ -116,11 +116,13 @@ func main() {
 	var openTelemetryClientCertificateSecret string
 	var openTelemetryCertificateSecret string
 	var imagePullSecretsFlag string
+	var policyServerMetricsPort int
 
 	flag.StringVar(&mgrOpts.MetricsAddr, "metrics-bind-address", ":8088", "The address the controller-runtime metric endpoint binds to.")
 	flag.StringVar(&mgrOpts.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.IntVar(&mgrOpts.WebhookServerPort, "webhook-server-port", 9443, "The port the webhook server listens on.")
-	policyServerMetricsPortFlag := flag.Int("policy-server-metrics-port",
+	flag.IntVar(&policyServerMetricsPort,
+		"policy-server-metrics-port",
 		constants.PolicyServerMetricsPort,
 		"The default port exposed by every PolicyServer metrics Service. "+
 			"Per-PolicyServer overrides (spec.metricsPort) always take priority.")
@@ -206,20 +208,19 @@ func main() {
 	}
 
 	// Validate --policy-server-metrics-port range.
-	if int64(*policyServerMetricsPortFlag) < minAllowedPort ||
-		int64(*policyServerMetricsPortFlag) > maxAllowedPort {
+	if int64(policyServerMetricsPort) < minAllowedPort ||
+		int64(policyServerMetricsPort) > maxAllowedPort {
 		setupLog.Error(
 			errors.New("port must be between 1 and 65535"),
 			"invalid policy server metrics port",
 			"flag", "--policy-server-metrics-port",
-			"value", *policyServerMetricsPortFlag,
+			"value", policyServerMetricsPort,
 			"min", minAllowedPort,
 			"max", maxAllowedPort,
 		)
 		retcode = 1
 		return
 	}
-	policyServerMetricsPort := int32(*policyServerMetricsPortFlag)
 	if envPort := os.Getenv(constants.PolicyServerMetricsPortEnvVar); envPort != "" {
 		if policyServerMetricsPortFlagSet {
 			setupLog.Info(
@@ -235,7 +236,7 @@ func main() {
 				retcode = 1
 				return
 			}
-			policyServerMetricsPort = int32(envPortParsed)
+			policyServerMetricsPort = int(envPortParsed)
 			setupLog.Info(
 				"WARNING: deprecated environment variable used as fallback; use --policy-server-metrics-port instead",
 				"envVar", constants.PolicyServerMetricsPortEnvVar,
@@ -302,7 +303,7 @@ func main() {
 		mgrOpts.DeploymentsNamespace,
 		config,
 		otelConfiguration,
-		policyServerMetricsPort,
+		int32(policyServerMetricsPort),
 	); err != nil {
 		setupLog.Error(err, "unable to create controllers")
 		retcode = 1

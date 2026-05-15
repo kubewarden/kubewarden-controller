@@ -200,3 +200,26 @@ tests:
                   path: tls.crt
                 - key: tls.key
                   path: tls.key
+  - it: "sidecar tracing should not set policy server metrics port when metrics are disabled"
+    set:
+      telemetry:
+        mode: "sidecar"
+        metrics: false
+        tracing: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --enable-otel-sidecar
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --enable-metrics
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --enable-tracing
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content:
+            --policy-server-metrics-port=8080

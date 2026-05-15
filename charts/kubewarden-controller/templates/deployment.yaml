@@ -82,9 +82,9 @@ spec:
        {{- if or .Values.telemetry.metrics .Values.telemetry.tracing }}
        {{- if and (eq .Values.telemetry.mode "sidecar") }}
         - --enable-otel-sidecar
-        {{- if .Values.telemetry.metrics }}
+       {{- end }}
+       {{- if and .Values.telemetry.metrics (eq .Values.telemetry.mode "sidecar") }}
         - --policy-server-metrics-port={{ .Values.telemetry.sidecar.metrics.port | default 8080 }}
-        {{- end }}
        {{- end }}
        {{- if .Values.telemetry.metrics }}
         - --enable-metrics
