@@ -61,7 +61,7 @@ spec:
       version: 1.29.0
     - name: kubewarden-controller
       repoURL: https://charts.kubewarden.io
-      version: 5.14.0-alpha
+      version: 5.15.0
     - name: kubewarden-defaults
       repoURL: https://charts.kubewarden.io
       version: 3.14.0-alpha
