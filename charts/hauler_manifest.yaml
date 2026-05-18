@@ -64,7 +64,7 @@ spec:
       version: 5.15.0
     - name: kubewarden-defaults
       repoURL: https://charts.kubewarden.io
-      version: 3.14.0-alpha
+      version: 3.15.0
     - name: policy-reporter
       version: 3.7.4
       repoURL: https://kyverno.github.io/policy-reporter
