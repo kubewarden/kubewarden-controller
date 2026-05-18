@@ -58,10 +58,10 @@ spec:
   charts:
     - name: kubewarden-crds
       repoURL: https://charts.kubewarden.io
-      version: 1.29.0
+      version: 1.28.0-beta.1
     - name: kubewarden-controller
       repoURL: https://charts.kubewarden.io
-      version: 5.15.0
+      version: 5.14.0-beta.1
     - name: kubewarden-defaults
       repoURL: https://charts.kubewarden.io
       version: 3.14.0-alpha
