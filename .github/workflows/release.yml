@@ -298,6 +298,8 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: |
             helm-charts
+          # minimum permissions to trigger a repository_dispatch on helm-charts:
+          permission-contents: write
       - name: Trigger chart update
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}

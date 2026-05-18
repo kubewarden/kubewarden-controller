@@ -26,6 +26,11 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }} # zizmor: ignore[secrets-outside-env]
           private-key: ${{ secrets.APP_PRIVATE_KEY }} # zizmor: ignore[secrets-outside-env]
+          owner: ${{ github.repository_owner }} # the default
+          repositories: ${{ github.event.repository.name }}
+          # minimum permissions for updatecli to push a branch and open a PR:
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Install cargo-set-version
         run: cargo install --locked --version 0.13.9 cargo-edit

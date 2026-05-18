@@ -30,6 +30,12 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }} # zizmor: ignore[secrets-outside-env]
           private-key: ${{ secrets.APP_PRIVATE_KEY }} # zizmor: ignore[secrets-outside-env]
+          owner: ${{ github.repository_owner }} # the default
+          repositories: ${{ github.event.repository.name }}
+          # minimum permissions for updatecli to push a branch and open a PR:
+          # (no permissions to bump deps in github workflows)
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Update all dependencies
         env:
