@@ -46,6 +46,10 @@ annotations:
   # See the Cluster Tools section to learn more about when to set this value to `cluster-tool`.
   catalog.cattle.io/type: cluster-tool
 dependencies:
+  - name: openreports
+    version: 0.2.1
+    repository: https://openreports.github.io/reports-api
+    condition: reportCRDs.installOpenReportsCRDs
   - name: policy-reporter
     version: 3.7.4
     repository: https://kyverno.github.io/policy-reporter
