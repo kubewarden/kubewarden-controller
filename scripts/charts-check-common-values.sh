@@ -9,8 +9,3 @@ diff <(yq eval '(.global // {}) | sort_keys(.)' charts/common-values.yaml) <(yq 
 	echo "kubewarden-controller values.yaml diverges from common-values.yaml"
 	exit 1
 )
-diff <(yq eval '(.global // {}) | sort_keys(.)' charts/common-values.yaml) <(yq eval '(.global // {}) | sort_keys(.)' charts/kubewarden-defaults/values.yaml) || (
-	echo
-	echo "kubewarden-defaults values.yaml diverges from charts/common-values.yaml"
-	exit 1
-)

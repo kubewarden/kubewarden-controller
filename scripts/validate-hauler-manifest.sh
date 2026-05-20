@@ -10,8 +10,8 @@
 # PR, on pushes to the main branch, and on manual workflow triggers. It
 # validates all container images (controller, audit-scanner,
 # policy-server, kuberlr-kubectl, policy modules and third-party images:
-# policy-reporter, policy-reporter-ui ) and Helm charts (kubewarden-crds,
-# kubewarden-controller, kubewarden-defaults, policy-reporter, openreports).
+# policy-reporter, policy-reporter-ui) and Helm charts (kubewarden-controller,
+# policy-reporter, openreports).
 # 
 # The weekly updatecli workflow automatically updates both Helm chart values
 # and the Hauler manifest. This validation serves as a safety check to catch
@@ -30,10 +30,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 HAULER_MANIFEST="$REPO_ROOT/charts/hauler_manifest.yaml"
 CONTROLLER_VALUES="$REPO_ROOT/charts/kubewarden-controller/values.yaml"
-DEFAULTS_VALUES="$REPO_ROOT/charts/kubewarden-defaults/values.yaml"
 CONTROLLER_CHART="$REPO_ROOT/charts/kubewarden-controller/Chart.yaml"
-DEFAULTS_CHART="$REPO_ROOT/charts/kubewarden-defaults/Chart.yaml"
-CRDS_CHART="$REPO_ROOT/charts/kubewarden-crds/Chart.yaml"
 
 ERRORS=0
 
@@ -86,9 +83,9 @@ AUDIT_SCANNER_HAULER_VERSION=$(get_hauler_image_version "adm-controller/audit-sc
 compare_version "audit-scanner" "$AUDIT_SCANNER_CHART_VERSION" "$AUDIT_SCANNER_HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate policy-server image
-POLICY_SERVER_CHART_VERSION=$(yq eval '.policyServer.image.tag' "$DEFAULTS_VALUES")
+POLICY_SERVER_CHART_VERSION=$(yq eval '.defaults.policyServer.image.tag' "$CONTROLLER_VALUES")
 POLICY_SERVER_HAULER_VERSION=$(get_hauler_image_version "adm-controller/policy-server")
-compare_version "policy-server" "$POLICY_SERVER_CHART_VERSION" "$POLICY_SERVER_HAULER_VERSION" "$DEFAULTS_VALUES"
+compare_version "policy-server" "$POLICY_SERVER_CHART_VERSION" "$POLICY_SERVER_HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate kuberlr-kubectl image
 KUBERLR_CHART_VERSION=$(yq eval '.preDeleteJob.image.tag' "$CONTROLLER_VALUES")
@@ -127,34 +124,34 @@ echo "==============================="
 echo
 
 # Validate allow-privilege-escalation-psp policy
-POLICY_VERSION=$(yq eval '.recommendedPolicies.allowPrivilegeEscalationPolicy.module.tag' "$DEFAULTS_VALUES")
+POLICY_VERSION=$(yq eval '.defaults.recommendedPolicies.allowPrivilegeEscalationPolicy.module.tag' "$CONTROLLER_VALUES")
 HAULER_VERSION=$(get_hauler_image_version "policies/allow-privilege-escalation-psp")
-compare_version "allow-privilege-escalation-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$DEFAULTS_VALUES"
+compare_version "allow-privilege-escalation-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate capabilities-psp policy
-POLICY_VERSION=$(yq eval '.recommendedPolicies.capabilitiesPolicy.module.tag' "$DEFAULTS_VALUES")
+POLICY_VERSION=$(yq eval '.defaults.recommendedPolicies.capabilitiesPolicy.module.tag' "$CONTROLLER_VALUES")
 HAULER_VERSION=$(get_hauler_image_version "policies/capabilities-psp")
-compare_version "capabilities-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$DEFAULTS_VALUES"
+compare_version "capabilities-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate host-namespaces-psp policy
-POLICY_VERSION=$(yq eval '.recommendedPolicies.hostNamespacePolicy.module.tag' "$DEFAULTS_VALUES")
+POLICY_VERSION=$(yq eval '.defaults.recommendedPolicies.hostNamespacePolicy.module.tag' "$CONTROLLER_VALUES")
 HAULER_VERSION=$(get_hauler_image_version "policies/host-namespaces-psp")
-compare_version "host-namespaces-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$DEFAULTS_VALUES"
+compare_version "host-namespaces-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate hostpaths-psp policy
-POLICY_VERSION=$(yq eval '.recommendedPolicies.hostPathsPolicy.module.tag' "$DEFAULTS_VALUES")
+POLICY_VERSION=$(yq eval '.defaults.recommendedPolicies.hostPathsPolicy.module.tag' "$CONTROLLER_VALUES")
 HAULER_VERSION=$(get_hauler_image_version "policies/hostpaths-psp")
-compare_version "hostpaths-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$DEFAULTS_VALUES"
+compare_version "hostpaths-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate pod-privileged policy
-POLICY_VERSION=$(yq eval '.recommendedPolicies.podPrivilegedPolicy.module.tag' "$DEFAULTS_VALUES")
+POLICY_VERSION=$(yq eval '.defaults.recommendedPolicies.podPrivilegedPolicy.module.tag' "$CONTROLLER_VALUES")
 HAULER_VERSION=$(get_hauler_image_version "policies/pod-privileged")
-compare_version "pod-privileged" "$POLICY_VERSION" "$HAULER_VERSION" "$DEFAULTS_VALUES"
+compare_version "pod-privileged" "$POLICY_VERSION" "$HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate user-group-psp policy
-POLICY_VERSION=$(yq eval '.recommendedPolicies.userGroupPolicy.module.tag' "$DEFAULTS_VALUES")
+POLICY_VERSION=$(yq eval '.defaults.recommendedPolicies.userGroupPolicy.module.tag' "$CONTROLLER_VALUES")
 HAULER_VERSION=$(get_hauler_image_version "policies/user-group-psp")
-compare_version "user-group-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$DEFAULTS_VALUES"
+compare_version "user-group-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$CONTROLLER_VALUES"
 
 echo
 echo "📋 Validating Helm Charts..."
@@ -167,30 +164,20 @@ get_hauler_chart_version() {
     yq eval ".spec.charts[] | select(.name == \"$chart_name\") | .version" "$HAULER_MANIFEST"
 }
 
-# Validate kubewarden-crds chart
-CHART_VERSION=$(yq eval '.version' "$CRDS_CHART")
-HAULER_VERSION=$(get_hauler_chart_version "kubewarden-crds")
-compare_version "kubewarden-crds chart" "$CHART_VERSION" "$HAULER_VERSION" "$CRDS_CHART"
-
 # Validate kubewarden-controller chart
 CHART_VERSION=$(yq eval '.version' "$CONTROLLER_CHART")
 HAULER_VERSION=$(get_hauler_chart_version "kubewarden-controller")
 compare_version "kubewarden-controller chart" "$CHART_VERSION" "$HAULER_VERSION" "$CONTROLLER_CHART"
 
-# Validate kubewarden-defaults chart
-CHART_VERSION=$(yq eval '.version' "$DEFAULTS_CHART")
-HAULER_VERSION=$(get_hauler_chart_version "kubewarden-defaults")
-compare_version "kubewarden-defaults chart" "$CHART_VERSION" "$HAULER_VERSION" "$DEFAULTS_CHART"
-
 # Validate policy-reporter chart (from kubewarden-controller dependencies)
-CHART_VERSION=$(yq eval '.dependencies[0].version' "$CONTROLLER_CHART")
+CHART_VERSION=$(yq eval '.dependencies[] | select(.name == "policy-reporter") | .version' "$CONTROLLER_CHART")
 HAULER_VERSION=$(get_hauler_chart_version "policy-reporter")
 compare_version "policy-reporter chart" "$CHART_VERSION" "$HAULER_VERSION" "$CONTROLLER_CHART dependencies"
 
-# Validate openreports chart (from kubewarden-crds dependencies)
-CHART_VERSION=$(yq eval '.dependencies[0].version' "$CRDS_CHART")
+# Validate openreports chart (from kubewarden-controller dependencies)
+CHART_VERSION=$(yq eval '.dependencies[] | select(.name == "openreports") | .version' "$CONTROLLER_CHART")
 HAULER_VERSION=$(get_hauler_chart_version "openreports")
-compare_version "openreports chart" "$CHART_VERSION" "$HAULER_VERSION" "$CRDS_CHART dependencies"
+compare_version "openreports chart" "$CHART_VERSION" "$HAULER_VERSION" "$CONTROLLER_CHART dependencies"
 
 echo
 echo "=================================="

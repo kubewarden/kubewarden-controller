@@ -46,9 +46,7 @@ test-rust:
 
 .PHONY: helm-unittest
 helm-unittest:
-	helm unittest charts/kubewarden-crds --file "tests/**/*_test.yaml"
 	helm unittest charts/kubewarden-controller --file "tests/**/*_test.yaml"
-	helm unittest charts/kubewarden-defaults --file "tests/**/*_test.yaml"
 
 .PHONY: test-e2e
 test-e2e: controller-image audit-scanner-image policy-server-image
@@ -162,13 +160,14 @@ manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefin
 	$(GO_BUILD_ENV) $(CONTROLLER_GEN) rbac:roleName=kubewarden-controller-manager,fileName=controller-rbac-roles.yaml crd webhook \
 			paths="./api/policies/v1" paths="./api/policies/v1alpha2" \
 			paths="./internal/controller" paths="./cmd/controller" \
-			output:crd:artifacts:config=charts/kubewarden-crds/templates/crds \
-			output:rbac:artifacts:config=charts/kubewarden-controller/templates \
+			output:crd:artifacts:config=charts/kubewarden-controller/templates/crds \
+			output:rbac:artifacts:config=charts/kubewarden-controller/templates/controller \
 			output:webhook:artifacts:config=charts
+	sed -i '/controller-gen.kubebuilder.io\/version:/a\    helm.sh/resource-policy: keep' charts/kubewarden-controller/templates/crds/policies.kubewarden.io_*.yaml
 	echo "# to be merged manually into kubewarden-controller/templates/webhooks.yaml" | cat - charts/manifests.yaml > temp && mv temp charts/manifests.yaml
 	mv charts/manifests.yaml charts/generated-webhooks-manifests.yaml
-	sed -i '/^metadata:/a\  labels:\n    {{- include "kubewarden-controller.labels" . | nindent 4 }}\n  annotations:\n    {{- include "kubewarden-controller.annotations" . | nindent 4 }}' charts/kubewarden-controller/templates/controller-rbac-roles.yaml
-	sed -i 's/  namespace: kubewarden/  namespace: {{ .Release.Namespace }}/' charts/kubewarden-controller/templates/controller-rbac-roles.yaml
+	sed -i '/^metadata:/a\  labels:\n    {{- include "kubewarden-controller.labels" . | nindent 4 }}\n  annotations:\n    {{- include "kubewarden-controller.annotations" . | nindent 4 }}' charts/kubewarden-controller/templates/controller/controller-rbac-roles.yaml
+	sed -i 's/  namespace: kubewarden/  namespace: {{ .Release.Namespace }}/' charts/kubewarden-controller/templates/controller/controller-rbac-roles.yaml
 
 .PHONY: generate-chart
 generate-chart: ## Generate Helm chart values schema.

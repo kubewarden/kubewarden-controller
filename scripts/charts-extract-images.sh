@@ -2,7 +2,7 @@
 set -euo pipefail
 
 CHART_DIR=$1
-CHARTS_DIRS=$(find "$CHART_DIR" -type d -exec test -e '{}'/values.yaml \; -print | grep -v kubewarden-crds)
+CHARTS_DIRS=$(find "$CHART_DIR" -type d -exec test -e '{}'/values.yaml \; -print)
 IMAGELIST_FILENAME=imagelist.txt
 TMP_IMAGE_FILE=/tmp/$IMAGELIST_FILENAME
 

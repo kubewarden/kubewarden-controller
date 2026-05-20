@@ -28,7 +28,7 @@
 #   --no-sigstore         Install Kubewarden in stage 3 without any Sigstore
 #                         configuration. Skips policy deployment and webhook evaluation.
 #   --policy-server-image Full image reference (repository:tag) for the policy-server.
-#                         Overrides the default image in charts/kubewarden-defaults.
+#                         Overrides the default image in the kubewarden-controller chart.
 #                         Example: --policy-server-image ghcr.io/kubewarden/adm-controller/policy-server:dev
 #
 # Tools required (per stage):
@@ -398,15 +398,10 @@ function install_kubewarden() {
     kubectl create namespace "$KUBEWARDEN_NAMESPACE" \
         --dry-run=client -o yaml | kubectl apply -f -
 
-    echo -e "${GREEN}  Installing kubewarden-crds...${NC}"
-    helm upgrade --install kubewarden-crds ./charts/kubewarden-crds \
-        -n "$KUBEWARDEN_NAMESPACE" \
-        --wait
-
-    echo -e "${GREEN}  Installing adm-controller...${NC}"
+    echo -e "${GREEN}  Installing kubewarden-controller (unified chart)...${NC}"
     helm upgrade --install kubewarden-controller ./charts/kubewarden-controller \
         -n "$KUBEWARDEN_NAMESPACE" \
-        --set replicas=1 \
+        --set controller.replicas=1 \
         --wait
 
     echo -e "${GREEN}  Waiting for adm-controller rollout...${NC}"
@@ -419,8 +414,8 @@ function build_image_flags() {
     # policy-server image when POLICY_SERVER_IMAGE is set.
     IMAGE_FLAGS=()
     if [[ -n "${POLICY_SERVER_IMAGE}" ]]; then
-        IMAGE_FLAGS+=(--set "policyServer.image.repository=${POLICY_SERVER_IMAGE%:*}")
-        IMAGE_FLAGS+=(--set "policyServer.image.tag=${POLICY_SERVER_IMAGE##*:}")
+        IMAGE_FLAGS+=(--set "defaults.policyServer.image.repository=${POLICY_SERVER_IMAGE%:*}")
+        IMAGE_FLAGS+=(--set "defaults.policyServer.image.tag=${POLICY_SERVER_IMAGE##*:}")
     fi
 }
 
@@ -439,20 +434,22 @@ function configure_policy_server() {
         -n "$KUBEWARDEN_NAMESPACE" \
         --dry-run=client -o yaml | kubectl apply -f -
 
-    echo -e "${GREEN}  Installing kubewarden-defaults with sigstoreTrustConfig...${NC}"
+    echo -e "${GREEN}  Upgrading kubewarden-controller with default PolicyServer and Sigstore config...${NC}"
     local image_flags=()
     build_image_flags
     image_flags=("${IMAGE_FLAGS[@]}")
 
-    helm upgrade --install kubewarden-defaults ./charts/kubewarden-defaults \
+    helm upgrade --install kubewarden-controller ./charts/kubewarden-controller \
         -n "$KUBEWARDEN_NAMESPACE" \
-        --set policyServer.sigstoreTrustConfig="$SIGSTORE_TRUST_CONFIGMAP" \
-        --set policyServer.verificationConfig="$VERIFICATION_CONFIGMAP" \
-        --set 'policyServer.insecureSources[0]=registry.local:5001' \
-        --set 'policyServer.env[0].name=KUBEWARDEN_LOG_LEVEL' \
-        --set 'policyServer.env[0].value=info' \
-        --set 'policyServer.env[1].name=RUST_BACKTRACE' \
-        --set 'policyServer.env[1].value=1' \
+        --set controller.replicas=1 \
+        --set defaults.enabled=true \
+        --set 'defaults.policyServer.sigstoreTrustConfig'="$SIGSTORE_TRUST_CONFIGMAP" \
+        --set 'defaults.policyServer.verificationConfig'="$VERIFICATION_CONFIGMAP" \
+        --set 'defaults.policyServer.insecureSources[0]=registry.local:5001' \
+        --set 'defaults.policyServer.env[0].name=KUBEWARDEN_LOG_LEVEL' \
+        --set 'defaults.policyServer.env[0].value=info' \
+        --set 'defaults.policyServer.env[1].name=RUST_BACKTRACE' \
+        --set 'defaults.policyServer.env[1].value=1' \
         "${image_flags[@]}" \
         --wait
     # Policy-server readiness is confirmed when the ClusterAdmissionPolicy
@@ -460,18 +457,20 @@ function configure_policy_server() {
 }
 
 function install_kubewarden_no_sigstore() {
-    echo -e "${GREEN}Installing kubewarden-defaults (no Sigstore configuration)...${NC}"
+    echo -e "${GREEN}Upgrading kubewarden-controller with default PolicyServer (no Sigstore configuration)...${NC}"
 
     local image_flags=()
     build_image_flags
     image_flags=("${IMAGE_FLAGS[@]}")
 
-    helm upgrade --install kubewarden-defaults ./charts/kubewarden-defaults \
+    helm upgrade --install kubewarden-controller ./charts/kubewarden-controller \
         -n "$KUBEWARDEN_NAMESPACE" \
-        --set 'policyServer.env[0].name=KUBEWARDEN_LOG_LEVEL' \
-        --set 'policyServer.env[0].value=info' \
-        --set 'policyServer.env[1].name=RUST_BACKTRACE' \
-        --set 'policyServer.env[1].value=1' \
+        --set controller.replicas=1 \
+        --set defaults.enabled=true \
+        --set 'defaults.policyServer.env[0].name=KUBEWARDEN_LOG_LEVEL' \
+        --set 'defaults.policyServer.env[0].value=info' \
+        --set 'defaults.policyServer.env[1].name=RUST_BACKTRACE' \
+        --set 'defaults.policyServer.env[1].value=1' \
         "${image_flags[@]}" \
         --wait
 

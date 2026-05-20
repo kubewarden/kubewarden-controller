@@ -11,5 +11,3 @@ CONTROLLER_URL=$(gh release view "$CONTROLLER_VERSION" --repo kubewarden/adm-con
   echo "Kubewarden Admission Controller [changelog]($CONTROLLER_URL)"
 } >>$TMP_CHANGELOG_FILE_PATH
 cp $TMP_CHANGELOG_FILE_PATH "$CHART_DIR/kubewarden-controller/CHANGELOG.md"
-cp $TMP_CHANGELOG_FILE_PATH "$CHART_DIR/kubewarden-defaults/CHANGELOG.md"
-cp $TMP_CHANGELOG_FILE_PATH "$CHART_DIR/kubewarden-crds/CHANGELOG.md"

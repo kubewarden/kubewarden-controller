@@ -8,13 +8,32 @@ update_settings(k8s_upsert_timeout_secs=300)
 load("ext://namespace", "namespace_create")
 namespace_create("kubewarden")
 
-# Install the CRDs Helm chart first
-crds_yaml = helm(
-    "./charts/kubewarden-crds",
-    name="kubewarden-crds",
+# Install the unified Kubewarden admission controller chart
+registry = settings.get("registry")
+controller_image = settings.get("controller").get("image")
+audit_scanner_image = settings.get("audit-scanner").get("image")
+policy_server_image = settings.get("policy-server").get("image")
+
+kubewarden_yaml = helm(
+    "./charts/kubewarden-controller",
+    name="kubewarden",
     namespace="kubewarden",
+    set=[
+        "global.cattle.systemDefaultRegistry=null",
+        "image.repository=" + registry + "/" + controller_image,
+        "replicas=1",
+        "logLevel=debug",
+        "podSecurityContext=null",
+        "containerSecurityContext=null",
+        "auditScanner.image.repository=" + registry + "/" + audit_scanner_image,
+        "auditScanner.logLevel=debug",
+        "policyServer.enabled=true",
+        "policyServer.image.repository=" + registry + "/" + policy_server_image,
+        "policyServer.env[0].name=KUBEWARDEN_LOG_LEVEL",
+        "policyServer.env[0].value=debug",
+    ],
 )
-k8s_yaml(crds_yaml)
+k8s_yaml(kubewarden_yaml)
 
 # Group all CRDs under a single resource name for dependency tracking
 k8s_resource(
@@ -28,49 +47,14 @@ k8s_resource(
     ],
 )
 
-registry = settings.get("registry")
-controller_image = settings.get("controller").get("image")
-audit_scanner_image = settings.get("audit-scanner").get("image")
-policy_server_image = settings.get("policy-server").get("image")
-
-kubewarden_controller_yaml = helm(
-    "./charts/kubewarden-controller",
-    name="kubewarden-controller",
-    namespace="kubewarden",
-    set=[
-        "global.cattle.systemDefaultRegistry=null",
-        "image.repository=" + registry + "/" + controller_image,
-        "replicas=1",
-        "logLevel=debug",
-        "podSecurityContext=null",
-        "containerSecurityContext=null",
-        "auditScanner.image.repository=" + registry + "/" + audit_scanner_image,
-        "auditScanner.logLevel=debug", 
-    ],
-)
-k8s_yaml(kubewarden_controller_yaml)
-
-# Wait for kubewarden-controller deployment to be ready before applying defaults
-# This ensures the webhook is running before PolicyServer resources are created
+# Wait for controller deployment to be ready
 k8s_resource(
-    'kubewarden-controller:deployment',
+    'kubewarden:deployment',
     new_name='kubewarden-controller',
     resource_deps=['kubewarden-crds'],
 )
 
-kubewarden_defaults_yaml = helm(
-    "./charts/kubewarden-defaults",
-    name="kubewarden-defaults",
-    namespace="kubewarden",
-    set=[
-        "global.cattle.systemDefaultRegistry=null",
-        "policyServer.image.repository=" + registry + "/" + policy_server_image,
-        "policyServer.env[0].name=KUBEWARDEN_LOG_LEVEL",
-        "policyServer.env[0].value=debug",
-    ],
-)
-k8s_yaml(kubewarden_defaults_yaml)
-
+# Default PolicyServer resource dependency
 k8s_resource(
     'default',
     resource_deps=['kubewarden-controller', 'policy_server_tilt'],
