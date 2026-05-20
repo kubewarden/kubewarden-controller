@@ -1,6 +1,6 @@
 suite: existing certificates are not overwritten
 templates:
-  - webhooks.yaml
+  - controller/webhooks.yaml
 release:
   namespace: "kubewarden"
 kubernetesProvider:

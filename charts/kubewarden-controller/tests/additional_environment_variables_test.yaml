@@ -1,6 +1,6 @@
 suite: additionalEnvironmentVariables configuration
 templates:
-  - deployment.yaml
+  - controller/deployment.yaml
 tests:
   - it: "should not add extra env vars when additionalEnvironmentVariables is empty (default)"
     asserts:

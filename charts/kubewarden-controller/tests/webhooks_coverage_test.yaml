@@ -1,6 +1,6 @@
 suite: webhooks Helm templating coverage
 templates:
-  - webhooks.yaml
+  - controller/webhooks.yaml
 release:
   namespace: "kubewarden"
 

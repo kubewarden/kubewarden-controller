@@ -1,6 +1,6 @@
 suite: controller RBAC roles
 templates:
-  - controller-rbac-roles.yaml
+  - controller/controller-rbac-roles.yaml
 release:
   namespace: "kubewarden"
 tests:

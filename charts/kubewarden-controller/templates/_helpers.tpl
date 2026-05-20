@@ -104,6 +104,25 @@ Create the name of the service account to use for kubewarden-controller
 {{- include "kubewarden-controller.fullname" . }}
 {{- end }}
 
+{{/*
+Create the webhook service name, ensuring it doesn't exceed 63 characters.
+The service name is fullname + "-webhook-service" (16 chars), so we need to
+limit fullname to 47 chars to stay under the 63 char limit.
+*/}}
+{{- define "kubewarden-controller.webhookServiceName" -}}
+{{- if .Values.fullnameOverride }}
+{{- printf "%s-webhook-service" (.Values.fullnameOverride | trunc 47 | trimSuffix "-") }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- printf "%s-webhook-service" (.Release.Name | trunc 47 | trimSuffix "-") }}
+{{- else }}
+{{- $fullname := printf "%s-%s" .Release.Name $name | trunc 47 | trimSuffix "-" }}
+{{- printf "%s-webhook-service" $fullname }}
+{{- end }}
+{{- end }}
+{{- end }}
+
 {{- define "system_default_registry" -}}
 {{- if .Values.global.cattle.systemDefaultRegistry -}}
 {{- printf "%s/" .Values.global.cattle.systemDefaultRegistry -}}

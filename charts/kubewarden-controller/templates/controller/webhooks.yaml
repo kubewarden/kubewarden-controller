@@ -33,7 +33,7 @@
 {{ $webhookServerKey = (index $webhookServerCertSecret.data "tls.key") }}
 {{ else }}
 # generate webhook server leaf certificate
-{{ $controllerDNSName :=  printf "%s-webhook-service.%s.svc" (include "kubewarden-controller.fullname" .) .Release.Namespace }}
+{{ $controllerDNSName :=  printf "%s.%s.svc" (include "kubewarden-controller.webhookServiceName" .) .Release.Namespace }}
 {{ $webhookServerCertKeyPair := genSignedCertWithKey $controllerDNSName nil ( list $controllerDNSName ) 365 $ca (genPrivateKey "ecdsa") }}
 {{ $webhookServerCert = ($webhookServerCertKeyPair.Cert | b64enc) }}
 {{ $webhookServerKey = ($webhookServerCertKeyPair.Key | b64enc) }}
@@ -102,7 +102,7 @@ webhooks:
   clientConfig:
     caBundle: {{ $caBundle }}
     service:
-      name: {{ include "kubewarden-controller.fullname" . }}-webhook-service
+      name: {{ include "kubewarden-controller.webhookServiceName" . }}
       namespace: {{ .Release.Namespace }}
       path: /mutate-policies-kubewarden-io-v1-clusteradmissionpolicy
   failurePolicy: Fail
@@ -124,7 +124,7 @@ webhooks:
   clientConfig:
     caBundle: {{ $caBundle }}
     service:
-      name: {{ include "kubewarden-controller.fullname" . }}-webhook-service
+      name: {{ include "kubewarden-controller.webhookServiceName" . }}
       namespace: {{ .Release.Namespace }}
       path: /mutate-policies-kubewarden-io-v1-clusteradmissionpolicygroup
   failurePolicy: Fail
@@ -146,7 +146,7 @@ webhooks:
   clientConfig:
     caBundle: {{ $caBundle }}
     service:
-      name: {{ include "kubewarden-controller.fullname" . }}-webhook-service
+      name: {{ include "kubewarden-controller.webhookServiceName" . }}
       namespace: {{ .Release.Namespace }}
       path: /mutate-policies-kubewarden-io-v1-policyserver
   failurePolicy: Fail
@@ -168,7 +168,7 @@ webhooks:
   clientConfig:
     caBundle: {{ $caBundle }}
     service:
-      name: {{ include "kubewarden-controller.fullname" . }}-webhook-service
+      name: {{ include "kubewarden-controller.webhookServiceName" . }}
       namespace: {{ .Release.Namespace }}
       path: /mutate-policies-kubewarden-io-v1-admissionpolicy
   failurePolicy: Fail
@@ -190,7 +190,7 @@ webhooks:
   clientConfig:
     caBundle: {{ $caBundle }}
     service:
-      name: {{ include "kubewarden-controller.fullname" . }}-webhook-service
+      name: {{ include "kubewarden-controller.webhookServiceName" . }}
       namespace: {{ .Release.Namespace }}
       path: /mutate-policies-kubewarden-io-v1-admissionpolicygroup
   failurePolicy: Fail
@@ -222,7 +222,7 @@ webhooks:
   clientConfig:
     caBundle: {{ $caBundle }}
     service:
-      name: {{ include "kubewarden-controller.fullname" . }}-webhook-service
+      name: {{ include "kubewarden-controller.webhookServiceName" . }}
       namespace: {{ .Release.Namespace }}
       path: /validate-policies-kubewarden-io-v1-clusteradmissionpolicy
   failurePolicy: Fail
@@ -244,7 +244,7 @@ webhooks:
   clientConfig:
     caBundle: {{ $caBundle }}
     service:
-      name: {{ include "kubewarden-controller.fullname" . }}-webhook-service
+      name: {{ include "kubewarden-controller.webhookServiceName" . }}
       namespace: {{ .Release.Namespace }}
       path: /validate-policies-kubewarden-io-v1-clusteradmissionpolicygroup
   failurePolicy: Fail
@@ -266,7 +266,7 @@ webhooks:
   clientConfig:
     caBundle: {{ $caBundle }}
     service:
-      name: {{ include "kubewarden-controller.fullname" . }}-webhook-service
+      name: {{ include "kubewarden-controller.webhookServiceName" . }}
       namespace: {{ .Release.Namespace }}
       path: /validate-policies-kubewarden-io-v1-admissionpolicy
   failurePolicy: Fail
@@ -288,7 +288,7 @@ webhooks:
   clientConfig:
     caBundle: {{ $caBundle }}
     service:
-      name: {{ include "kubewarden-controller.fullname" . }}-webhook-service
+      name: {{ include "kubewarden-controller.webhookServiceName" . }}
       namespace: {{ .Release.Namespace }}
       path: /validate-policies-kubewarden-io-v1-admissionpolicygroup
   failurePolicy: Fail
@@ -309,7 +309,7 @@ webhooks:
   clientConfig:
     caBundle: {{ $caBundle }}
     service:
-      name: {{ include "kubewarden-controller.fullname" . }}-webhook-service
+      name: {{ include "kubewarden-controller.webhookServiceName" . }}
       namespace: {{ .Release.Namespace }}
       path: /validate-policies-kubewarden-io-v1-policyserver
   failurePolicy: Fail
