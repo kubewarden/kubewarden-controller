@@ -46,6 +46,14 @@ const (
 	PartOfLabelValue                = "kubewarden"
 	ManagedByKey                    = "app.kubernetes.io/managed-by"
 
+	// DefaultsManagedByLabelKey is the label key for resources managed by DefaultsApplier.
+	DefaultsManagedByLabelKey = "kubewarden.io/managed-by"
+	// DefaultsManagedByLabelValue is the label value for resources managed by DefaultsApplier.
+	DefaultsManagedByLabelValue = "kubewarden-controller-defaults"
+
+	// DefaultDefaultsConfigMapName is the default name of the ConfigMap containing default resources.
+	DefaultDefaultsConfigMapName = "kubewarden-defaults"
+
 	PolicyServerIndexKey = ".spec.policyServer"
 
 	KubewardenFinalizerPre114 = "kubewarden"

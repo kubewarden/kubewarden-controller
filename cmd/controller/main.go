@@ -86,6 +86,7 @@ type ManagerOptions struct {
 type Configuration struct {
 	AlwaysAcceptAdmissionReviewsOnDeploymentsNamespace bool
 	ClientCAConfigMapName                              string
+	DefaultsConfigMapName                              string
 	FeatureGateAdmissionWebhookMatchConditions         bool
 	WebhookServiceName                                 string
 	ImagePullSecrets                                   []corev1.LocalObjectReference
@@ -144,6 +145,10 @@ func main() {
 		false,
 		"Always accept admission reviews targeting the deployments-namespace.")
 	flag.StringVar(&config.ClientCAConfigMapName, "client-ca-configmap-name", "", "The name of the ConfigMap containing the client CA certificate. If provided, mTLS will be enabled.")
+	flag.StringVar(&config.DefaultsConfigMapName,
+		"defaults-configmap-name",
+		constants.DefaultDefaultsConfigMapName,
+		"Name of the ConfigMap that holds the rendered default Kubewarden resources.")
 	flag.StringVar(&imagePullSecretsFlag,
 		"image-pull-secrets",
 		"",
@@ -445,6 +450,16 @@ func setupReconcilers(mgr ctrl.Manager,
 		FeatureGateAdmissionWebhookMatchConditions: config.FeatureGateAdmissionWebhookMatchConditions,
 	}).SetupWithManager(mgr); err != nil {
 		return errors.Join(errors.New("unable to create ClusterAdmissionPolicyGroup controller"), err)
+	}
+
+	if err := (&controller.DefaultsApplierReconciler{
+		Client:               mgr.GetClient(),
+		Scheme:               mgr.GetScheme(),
+		Log:                  ctrl.Log.WithName("defaults-applier"),
+		DeploymentsNamespace: deploymentsNamespace,
+		ConfigMapName:        config.DefaultsConfigMapName,
+	}).SetupWithManager(mgr); err != nil {
+		return errors.Join(errors.New("unable to create DefaultsApplier controller"), err)
 	}
 	return nil
 }
