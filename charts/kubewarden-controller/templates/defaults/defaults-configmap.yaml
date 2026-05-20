@@ -1,0 +1,41 @@
+{{- $hasAny := or .Values.policyServer.enabled .Values.recommendedPolicies.enabled -}}
+{{- if $hasAny }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.defaultConfigMapName | default "kubewarden-defaults" }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubewarden-controller.labels" . | nindent 4 }}
+  annotations:
+    {{- include "kubewarden-controller.annotations" . | nindent 4 }}
+data:
+  {{- if .Values.policyServer.enabled }}
+  policyserver-default.yaml: |
+    {{- include "kubewarden.defaults.policyserverDefault" . | nindent 4 }}
+  {{- end }}
+  {{- if and .Values.recommendedPolicies.enabled .Values.recommendedPolicies.allowPrivilegeEscalationPolicy }}
+  allow-privilege-escalation.yaml: |
+    {{- include "kubewarden.defaults.allowPrivilegeEscalation" . | nindent 4 }}
+  {{- end }}
+  {{- if and .Values.recommendedPolicies.enabled .Values.recommendedPolicies.capabilitiesPolicy }}
+  capabilities.yaml: |
+    {{- include "kubewarden.defaults.capabilities" . | nindent 4 }}
+  {{- end }}
+  {{- if and .Values.recommendedPolicies.enabled .Values.recommendedPolicies.hostNamespacePolicy }}
+  host-namespace.yaml: |
+    {{- include "kubewarden.defaults.hostNamespace" . | nindent 4 }}
+  {{- end }}
+  {{- if and .Values.recommendedPolicies.enabled .Values.recommendedPolicies.hostPathsPolicy }}
+  host-paths.yaml: |
+    {{- include "kubewarden.defaults.hostPaths" . | nindent 4 }}
+  {{- end }}
+  {{- if and .Values.recommendedPolicies.enabled .Values.recommendedPolicies.podPrivilegedPolicy }}
+  pod-privileged.yaml: |
+    {{- include "kubewarden.defaults.podPrivileged" . | nindent 4 }}
+  {{- end }}
+  {{- if and .Values.recommendedPolicies.enabled .Values.recommendedPolicies.userGroupPolicy }}
+  user-group.yaml: |
+    {{- include "kubewarden.defaults.userGroup" . | nindent 4 }}
+  {{- end }}
+{{- end }}
