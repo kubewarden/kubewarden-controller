@@ -478,6 +478,7 @@ async fn test_oci_manifest_capability(
             digest: "sha256:bc3511804cb29da6333f0187a333eba13a43a3a0a1737e9b50227a5cf057af74".to_owned(),
             annotations: None,
             urls: None,
+            artifact_type: None,
         },
         layers: vec![]
     }, Some(serde_json::json!({
@@ -502,6 +503,7 @@ async fn test_oci_manifest_capability(
             size: 2,
             digest: "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a".to_owned(),
             annotations: None, urls: None,
+            artifact_type: None,
         },
         layers: vec![]
     },

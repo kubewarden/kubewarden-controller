@@ -65,6 +65,16 @@
       "groupName": "Rust dependencies"
     },
     {
+      "description": "Update all opentelemetry packages together",
+      "groupName": "Rust opentelemetry packages",
+      "matchPackageNames": [
+        "opentelemetry",
+        "opentelemetry-otlp",
+        "opentelemetry_sdk",
+        "tracing-opentelemetry"
+      ]
+    },
+    {
       "description": "Update all jemalloc packages together",
       "groupName": "Rust jemalloc packages",
       "matchPackageNames": [
