@@ -1,0 +1,227 @@
+suite: defaults configmap configuration
+templates:
+  - defaults/defaults-configmap.yaml
+tests:
+  - it: "policy templates should have app.kubernetes.io labels"
+    set:
+      policyServer.enabled: true
+      recommendedPolicies.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["allow-privilege-escalation.yaml"]
+          pattern: "app.kubernetes.io/part-of: kubewarden"
+      - matchRegex:
+          path: data["allow-privilege-escalation.yaml"]
+          pattern: "app.kubernetes.io/component: policy"
+      - matchRegex:
+          path: data["allow-privilege-escalation.yaml"]
+          pattern: "app.kubernetes.io/managed-by: kubewarden-controller"
+      - matchRegex:
+          path: data["capabilities.yaml"]
+          pattern: "app.kubernetes.io/component: policy"
+      - matchRegex:
+          path: data["host-namespace.yaml"]
+          pattern: "app.kubernetes.io/component: policy"
+      - matchRegex:
+          path: data["host-paths.yaml"]
+          pattern: "app.kubernetes.io/component: policy"
+      - matchRegex:
+          path: data["pod-privileged.yaml"]
+          pattern: "app.kubernetes.io/component: policy"
+      - matchRegex:
+          path: data["user-group.yaml"]
+          pattern: "app.kubernetes.io/component: policy"
+
+  - it: "PolicyServer template should use component policy-server"
+    set:
+      policyServer.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["policyserver-default.yaml"]
+          pattern: "app.kubernetes.io/part-of: kubewarden"
+      - matchRegex:
+          path: data["policyserver-default.yaml"]
+          pattern: "app.kubernetes.io/component: policy-server"
+      - matchRegex:
+          path: data["policyserver-default.yaml"]
+          pattern: "app.kubernetes.io/managed-by: kubewarden-controller"
+
+  - it: "should include additionalAnnotations in policy templates"
+    set:
+      policyServer.enabled: true
+      recommendedPolicies.enabled: true
+      additionalAnnotations:
+        custom-annotation: custom-value
+    asserts:
+      - matchRegex:
+          path: data["allow-privilege-escalation.yaml"]
+          pattern: "custom-annotation: custom-value"
+      - matchRegex:
+          path: data["capabilities.yaml"]
+          pattern: "custom-annotation: custom-value"
+      - matchRegex:
+          path: data["host-namespace.yaml"]
+          pattern: "custom-annotation: custom-value"
+      - matchRegex:
+          path: data["host-paths.yaml"]
+          pattern: "custom-annotation: custom-value"
+      - matchRegex:
+          path: data["pod-privileged.yaml"]
+          pattern: "custom-annotation: custom-value"
+      - matchRegex:
+          path: data["user-group.yaml"]
+          pattern: "custom-annotation: custom-value"
+
+  - it: "should include additionalAnnotations in PolicyServer template"
+    set:
+      policyServer.enabled: true
+      additionalAnnotations:
+        custom-annotation: custom-value
+    asserts:
+      - matchRegex:
+          path: data["policyserver-default.yaml"]
+          pattern: "custom-annotation: custom-value"
+
+  - it: "should use policyServer.affinity in PolicyServer template"
+    set:
+      policyServer.enabled: true
+      policyServer.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+    asserts:
+      - matchRegex:
+          path: data["policyserver-default.yaml"]
+          pattern: "nodeAffinity"
+
+  - it: "should fallback to global.affinity for PolicyServer when policyServer.affinity is not set"
+    set:
+      policyServer.enabled: true
+      policyServer.affinity: {}
+      global.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+    asserts:
+      - matchRegex:
+          path: data["policyserver-default.yaml"]
+          pattern: "nodeAffinity"
+
+  - it: "should prefer policyServer.affinity over global.affinity"
+    set:
+      policyServer.enabled: true
+      policyServer.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: custom-ps-label
+                operator: In
+                values:
+                - ps-value
+      global.affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: global-label
+                operator: In
+                values:
+                - global-value
+    asserts:
+      - matchRegex:
+          path: data["policyserver-default.yaml"]
+          pattern: "custom-ps-label"
+      - notMatchRegex:
+          path: data["policyserver-default.yaml"]
+          pattern: "global-label"
+
+  - it: "should use crdVersion as apiVersion in all templates"
+    set:
+      policyServer.enabled: true
+      recommendedPolicies.enabled: true
+      crdVersion: "policies.kubewarden.io/v1"
+    asserts:
+      - matchRegex:
+          path: data["policyserver-default.yaml"]
+          pattern: "apiVersion: policies.kubewarden.io/v1"
+      - matchRegex:
+          path: data["allow-privilege-escalation.yaml"]
+          pattern: "apiVersion: policies.kubewarden.io/v1"
+      - matchRegex:
+          path: data["capabilities.yaml"]
+          pattern: "apiVersion: policies.kubewarden.io/v1"
+      - matchRegex:
+          path: data["host-namespace.yaml"]
+          pattern: "apiVersion: policies.kubewarden.io/v1"
+      - matchRegex:
+          path: data["host-paths.yaml"]
+          pattern: "apiVersion: policies.kubewarden.io/v1"
+      - matchRegex:
+          path: data["pod-privileged.yaml"]
+          pattern: "apiVersion: policies.kubewarden.io/v1"
+      - matchRegex:
+          path: data["user-group.yaml"]
+          pattern: "apiVersion: policies.kubewarden.io/v1"
+
+  - it: "should use custom crdVersion when overridden"
+    set:
+      policyServer.enabled: true
+      recommendedPolicies.enabled: true
+      crdVersion: "policies.kubewarden.io/v1beta1"
+    asserts:
+      - matchRegex:
+          path: data["policyserver-default.yaml"]
+          pattern: "apiVersion: policies.kubewarden.io/v1beta1"
+      - matchRegex:
+          path: data["allow-privilege-escalation.yaml"]
+          pattern: "apiVersion: policies.kubewarden.io/v1beta1"
+
+  - it: "allow-privilege-escalation should only have CREATE operation"
+    set:
+      recommendedPolicies.enabled: true
+    asserts:
+      - matchRegex:
+          path: data["allow-privilege-escalation.yaml"]
+          pattern: 'operations: \["CREATE"\]'
+      - notMatchRegex:
+          path: data["allow-privilege-escalation.yaml"]
+          pattern: "UPDATE"
+
+  - it: "should not render policy entries when recommendedPolicies.enabled is false"
+    set:
+      policyServer.enabled: true
+      recommendedPolicies.enabled: false
+    asserts:
+      - notExists:
+          path: data["allow-privilege-escalation.yaml"]
+      - notExists:
+          path: data["capabilities.yaml"]
+      - notExists:
+          path: data["host-namespace.yaml"]
+      - notExists:
+          path: data["host-paths.yaml"]
+      - notExists:
+          path: data["pod-privileged.yaml"]
+      - notExists:
+          path: data["user-group.yaml"]
+      - exists:
+          path: data["policyserver-default.yaml"]
+
+  - it: "should not render ConfigMap when both policyServer and recommendedPolicies are disabled"
+    set:
+      policyServer.enabled: false
+      recommendedPolicies.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
