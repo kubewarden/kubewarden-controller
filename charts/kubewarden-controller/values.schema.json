@@ -89,9 +89,6 @@
                 }
             }
         },
-        "crdVersion": {
-            "type": "string"
-        },
         "containerSecurityContext": {
             "type": "object",
             "properties": {
@@ -110,6 +107,9 @@
                     }
                 }
             }
+        },
+        "crdVersion": {
+            "type": "string"
         },
         "defaultConfigMapName": {
             "type": "string"
