@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -26,7 +28,9 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -55,6 +59,43 @@ const (
 	deploymentsNamespace = "kubewarden-integration-tests"
 )
 
+// loadKubewardenCRDsFromChart loads the Kubewarden admission controller CRDs
+// from the Helm chart templates directory.
+func loadKubewardenCRDsFromChart() ([]*apiextensionsv1.CustomResourceDefinition, error) {
+	chartCRDsPath := filepath.Join("..", "..", "charts", "kubewarden-controller", "templates", "crds")
+
+	// List of Kubewarden admission controller CRD files (excluding policy reports)
+	crdFiles := []string{
+		"policies.kubewarden.io_admissionpolicies.yaml",
+		"policies.kubewarden.io_admissionpolicygroups.yaml",
+		"policies.kubewarden.io_clusteradmissionpolicies.yaml",
+		"policies.kubewarden.io_clusteradmissionpolicygroups.yaml",
+		"policies.kubewarden.io_policyservers.yaml",
+	}
+
+	var crds []*apiextensionsv1.CustomResourceDefinition
+
+	for _, filename := range crdFiles {
+		crdPath := filepath.Join(chartCRDsPath, filename)
+
+		// Read the CRD file
+		data, err := os.ReadFile(crdPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read CRD file %s: %w", filename, err)
+		}
+
+		// Decode YAML to CRD object
+		crd := &apiextensionsv1.CustomResourceDefinition{}
+		if err := yaml.Unmarshal(data, crd); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal CRD from %s: %w", filename, err)
+		}
+
+		crds = append(crds, crd)
+	}
+
+	return crds, nil
+}
+
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
@@ -67,9 +108,13 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	var ctx context.Context
 	ctx, cancel := context.WithCancel(context.TODO())
 
+	// Load CRDs from the Helm chart
+	kubewardenCRDs, err := loadKubewardenCRDsFromChart()
+	Expect(err).NotTo(HaveOccurred(), "failed to load Kubewarden CRDs from Helm chart")
+	Expect(kubewardenCRDs).To(HaveLen(5), "expected 5 Kubewarden admission controller CRDs")
+
 	testEnv := &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "charts", "kubewarden-crds", "templates", "crds")},
-		ErrorIfCRDPathMissing: true,
+		CRDs: kubewardenCRDs,
 	}
 
 	restConfig, err := testEnv.Start()
@@ -135,6 +180,15 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 		TelemetryConfiguration: TelemetryConfiguration{
 			MetricsEnabled: true,
 		},
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&DefaultsApplierReconciler{
+		Client:               k8sManager.GetClient(),
+		Scheme:               k8sManager.GetScheme(),
+		Log:                  ctrl.Log.WithName("defaults-applier-test"),
+		DeploymentsNamespace: deploymentsNamespace,
+		ConfigMapName:        constants.DefaultDefaultsConfigMapName,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

@@ -104,6 +104,25 @@ Create the name of the service account to use for kubewarden-controller
 {{- include "kubewarden-controller.fullname" . }}
 {{- end }}
 
+{{/*
+Create the webhook service name, ensuring it doesn't exceed 63 characters.
+The service name is fullname + "-webhook-service" (16 chars), so we need to
+limit fullname to 47 chars to stay under the 63 char limit.
+*/}}
+{{- define "kubewarden-controller.webhookServiceName" -}}
+{{- if .Values.fullnameOverride }}
+{{- printf "%s-webhook-service" (.Values.fullnameOverride | trunc 47 | trimSuffix "-") }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- printf "%s-webhook-service" (.Release.Name | trunc 47 | trimSuffix "-") }}
+{{- else }}
+{{- $fullname := printf "%s-%s" .Release.Name $name | trunc 47 | trimSuffix "-" }}
+{{- printf "%s-webhook-service" $fullname }}
+{{- end }}
+{{- end }}
+{{- end }}
+
 {{- define "system_default_registry" -}}
 {{- if .Values.global.cattle.systemDefaultRegistry -}}
 {{- printf "%s/" .Values.global.cattle.systemDefaultRegistry -}}
@@ -204,6 +223,72 @@ Validate that hostNetwork and telemetry sidecar mode are not both enabled.
 They are incompatible because multiple OTel sidecars on the same node would
 cause port conflicts in host-network mode.
 */}}
+{{/*
+Labels for defaults resources (PolicyServer RBAC, etc.)
+Differs from kubewarden-controller.labels: no component label, AppVersion fallback to Chart.Version.
+*/}}
+{{- define "kubewarden-defaults.labels" -}}
+helm.sh/chart: {{ include "kubewarden-controller.chart" . }}
+{{ include "kubewarden-controller.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- else }}
+app.kubernetes.io/version: {{ .Chart.Version | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/part-of: kubewarden
+{{- if .Values.additionalLabels }}
+{{ toYaml .Values.additionalLabels }}
+{{- end }}
+{{- end }}
+
+{{/*
+Annotations for defaults resources.
+*/}}
+{{- define "kubewarden-defaults.annotations" -}}
+{{- if .Values.additionalAnnotations }}
+{{ toYaml .Values.additionalAnnotations }}
+{{- end }}
+{{- end }}
+
+{{- define "policy_default_registry" -}}
+{{- if .Values.recommendedPolicies.defaultPoliciesRegistry -}}
+{{- printf "%s/" .Values.recommendedPolicies.defaultPoliciesRegistry -}}
+{{- else -}}
+{{- printf "%s/" .Values.global.cattle.systemDefaultRegistry -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "policy_failure_policy" -}}
+{{- if eq .Values.recommendedPolicies.defaultPolicyMode "protect" -}}
+Fail
+{{- else -}}
+Ignore
+{{- end -}}
+{{- end -}}
+
+{{- define "policy-namespace-selector" -}}
+namespaceSelector:
+  matchExpressions:
+  - key: "kubernetes.io/metadata.name"
+    operator: NotIn
+    values:
+{{- with .Values.global.skipNamespaces }}
+      {{- toYaml . | nindent 4 }}
+{{- end }}
+{{- with .Values.recommendedPolicies.skipAdditionalNamespaces }}
+      {{- toYaml . | nindent 4 }}
+{{- end }}
+{{- end -}}
+
+{{- define "kubewarden-defaults.effectiveAffinity" -}}
+{{- if .Values.policyServer.affinity -}}
+  {{- toYaml .Values.policyServer.affinity -}}
+{{- else if .Values.global.affinity -}}
+  {{- toYaml .Values.global.affinity -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "kubewarden-controller.validateHostNetworkSidecar" -}}
 {{- if and .Values.hostNetwork (eq .Values.telemetry.mode "sidecar") (or .Values.telemetry.metrics .Values.telemetry.tracing) -}}
 {{- fail "hostNetwork and telemetry.mode=sidecar are incompatible: OpenTelemetry sidecar injection causes port conflicts in host-network mode. Use telemetry.mode=custom with a remote collector instead." -}}

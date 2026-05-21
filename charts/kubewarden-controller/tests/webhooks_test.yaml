@@ -1,6 +1,6 @@
 suite: certificates generation
 templates:
-  - webhooks.yaml
+  - controller/webhooks.yaml
 release:
   namespace: "kubewarden"
 tests:

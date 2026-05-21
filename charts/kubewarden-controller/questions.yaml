@@ -212,3 +212,97 @@ questions:
       The secret should contain the keys `tls.crt` and `tls.key`.
     group: "OpenTelemetry"
     show_if: "telemetry.mode=custom && telemetry.custom.insecure=false"
+  # CRD Settings:
+  - variable: "reportCRDs.installPolicyReportCRDs"
+    type: boolean
+    default: false
+    required: false
+    label: Install PolicyReport CRDs
+    description: |
+      Install the PolicyReport and ClusterPolicyReport CRDs.
+    group: "CRD Settings"
+  - variable: "reportCRDs.installOpenReportsCRDs"
+    type: boolean
+    default: true
+    required: false
+    label: Install OpenReports CRDs
+    description: |
+      Install the OpenReports CRDs via the openreports subchart.
+    group: "CRD Settings"
+  # Defaults:
+  - variable: "defaultConfigMapName"
+    type: string
+    default: "kubewarden-defaults"
+    required: false
+    label: Defaults ConfigMap name
+    description: |
+      Name of the ConfigMap used by the controller to apply default resources
+      (PolicyServer, recommended policies).
+    group: "Defaults"
+  # Default PolicyServer:
+  - variable: "policyServer.enabled"
+    type: boolean
+    default: true
+    required: true
+    label: Enable default PolicyServer
+    description: |
+      Deploy a default PolicyServer instance managed by the controller.
+    group: "Default PolicyServer"
+  - variable: "policyServer.replicaCount"
+    type: integer
+    default: 1
+    required: false
+    show_if: policyServer.enabled=true
+    label: Number of replicas
+    description: |
+      Number of replicas for the default PolicyServer.
+    group: "Default PolicyServer"
+  - variable: "policyServer.image.repository"
+    type: string
+    default: "kubewarden/adm-controller/policy-server"
+    show_if: policyServer.enabled=true
+    label: PolicyServer image repository
+    description: |
+      Container image repository for the default PolicyServer.
+    group: "Default PolicyServer"
+  - variable: "policyServer.image.tag"
+    type: string
+    default: "v1.36.0-beta.1"
+    show_if: policyServer.enabled=true
+    label: PolicyServer image tag
+    description: |
+      Container image tag for the default PolicyServer.
+    group: "Default PolicyServer"
+  - variable: "policyServer.serviceAccountName"
+    type: string
+    default: "policy-server"
+    show_if: policyServer.enabled=true
+    label: ServiceAccount name
+    description: |
+      ServiceAccount used by the default PolicyServer.
+    group: "Default PolicyServer"
+  # Recommended Policies:
+  - variable: "recommendedPolicies.enabled"
+    type: boolean
+    default: false
+    required: true
+    label: Enable recommended policies
+    description: |
+      Deploy recommended Kubewarden policies via the defaults ConfigMap.
+      These policies enforce security best practices such as preventing
+      privilege escalation, blocking host namespace sharing, and dropping
+      capabilities.
+    group: "Recommended Policies"
+  - variable: "recommendedPolicies.defaultPolicyMode"
+    type: enum
+    options:
+      - "monitor"
+      - "protect"
+    default: "monitor"
+    show_if: recommendedPolicies.enabled=true
+    label: Default policy mode
+    description: |
+      Default mode for recommended policies.
+      Monitor mode logs policy violations without blocking requests.
+      Protect mode blocks requests that violate the policy.
+    group: "Recommended Policies"

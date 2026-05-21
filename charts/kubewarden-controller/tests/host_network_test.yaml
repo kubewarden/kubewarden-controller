@@ -1,6 +1,6 @@
 suite: host-network configuration
 templates:
-  - deployment.yaml
+  - controller/deployment.yaml
 tests:
   - it: "should not set hostNetwork and should not pass --host-network flag by default"
     asserts:

@@ -1,6 +1,6 @@
 suite: service ports configuration
 templates:
-  - service.yaml
+  - controller/service.yaml
 tests:
   - it: "should use default ports in services"
     set:

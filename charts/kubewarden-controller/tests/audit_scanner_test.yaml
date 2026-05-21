@@ -1,6 +1,6 @@
 suite: Audit scanner configuration
 templates:
-  - audit-scanner.yaml
+  - controller/audit-scanner.yaml
 tests:
   - it: "should set report-kind properly when value is defined"
     set:

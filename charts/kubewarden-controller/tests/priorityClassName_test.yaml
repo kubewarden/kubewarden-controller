@@ -1,6 +1,6 @@
 suite: priorityClassName configuration
 templates:
-  - deployment.yaml
+  - controller/deployment.yaml
 tests:
   - it: "should set the priorityClassName when .global.priorityClassName is defined"
     set:
