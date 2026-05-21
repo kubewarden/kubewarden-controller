@@ -1,8 +1,14 @@
 {{- define "kubewarden.defaults.policyserverDefault" -}}
-apiVersion: policies.kubewarden.io/v1
+apiVersion: {{ $.Values.crdVersion }}
 kind: PolicyServer
 metadata:
   name: default
+  labels:
+    app.kubernetes.io/part-of: kubewarden
+    app.kubernetes.io/component: policy-server
+    app.kubernetes.io/managed-by: kubewarden-controller
+  annotations:
+    {{- include "kubewarden-defaults.annotations" . | nindent 4 }}
   finalizers:
     - kubewarden.io/finalizer
 spec:
@@ -15,7 +21,7 @@ spec:
   {{- if .Values.policyServer.maxUnavailable }}
   maxUnavailable: {{ .Values.policyServer.maxUnavailable }}
   {{- end }}
-  {{- $affinity := include "kubewarden-controller.effectiveAffinity" . -}}
+  {{- $affinity := include "kubewarden-defaults.effectiveAffinity" . -}}
   {{- if $affinity }}
   affinity: {{ $affinity | nindent 4 }}
   {{- end }}

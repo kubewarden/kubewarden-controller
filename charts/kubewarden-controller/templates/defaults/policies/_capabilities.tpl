@@ -1,11 +1,16 @@
 {{- define "kubewarden.defaults.capabilities" -}}
-apiVersion: policies.kubewarden.io/v1
+apiVersion: {{ $.Values.crdVersion }}
 kind: ClusterAdmissionPolicy
 metadata:
   name: {{ .Values.recommendedPolicies.capabilitiesPolicy.name }}
+  labels:
+    app.kubernetes.io/part-of: kubewarden
+    app.kubernetes.io/component: policy
+    app.kubernetes.io/managed-by: kubewarden-controller
   annotations:
     io.kubewarden.policy.severity: medium
     io.kubewarden.policy.category: PSP
+    {{- include "kubewarden-defaults.annotations" . | nindent 4 }}
 spec:
   mode: {{ .Values.recommendedPolicies.defaultPolicyMode | default "monitor" }}
   failurePolicy: {{ include "policy_failure_policy" . | trim }}

@@ -390,6 +390,8 @@ policy-reporter:
 
 # Defaults applier configuration
 defaultConfigMapName: kubewarden-defaults
+# crdVersion is the apiVersion used for all default policy and PolicyServer resources
+crdVersion: "policies.kubewarden.io/v1"
 
 # CRD installation toggles
 reportCRDs:

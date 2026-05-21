@@ -89,6 +89,9 @@
                 }
             }
         },
+        "crdVersion": {
+            "type": "string"
+        },
         "containerSecurityContext": {
             "type": "object",
             "properties": {

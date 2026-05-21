@@ -281,6 +281,14 @@ namespaceSelector:
 {{- end }}
 {{- end -}}
 
+{{- define "kubewarden-defaults.effectiveAffinity" -}}
+{{- if .Values.policyServer.affinity -}}
+  {{- toYaml .Values.policyServer.affinity -}}
+{{- else if .Values.global.affinity -}}
+  {{- toYaml .Values.global.affinity -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "kubewarden-controller.validateHostNetworkSidecar" -}}
 {{- if and .Values.hostNetwork (eq .Values.telemetry.mode "sidecar") (or .Values.telemetry.metrics .Values.telemetry.tracing) -}}
 {{- fail "hostNetwork and telemetry.mode=sidecar are incompatible: OpenTelemetry sidecar injection causes port conflicts in host-network mode. Use telemetry.mode=custom with a remote collector instead." -}}
