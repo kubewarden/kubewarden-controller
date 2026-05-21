@@ -223,4 +223,3 @@ func (rk resourceKey) String() string {
 	}
 	return fmt.Sprintf("%s/%s/%s", rk.gvk, rk.namespace, rk.name)
 }
-
