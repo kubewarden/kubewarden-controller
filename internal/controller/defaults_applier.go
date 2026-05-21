@@ -170,11 +170,11 @@ func (r *DefaultsApplierReconciler) cleanupStale(ctx context.Context, desired ma
 	}
 
 	gvks := []schema.GroupVersionKind{
-		{Group: "policies.kubewarden.io", Version: "v1", Kind: "PolicyServerList"},
-		{Group: "policies.kubewarden.io", Version: "v1", Kind: "ClusterAdmissionPolicyList"},
-		{Group: "policies.kubewarden.io", Version: "v1", Kind: "AdmissionPolicyList"},
-		{Group: "policies.kubewarden.io", Version: "v1", Kind: "ClusterAdmissionPolicyGroupList"},
-		{Group: "policies.kubewarden.io", Version: "v1", Kind: "AdmissionPolicyGroupList"},
+		{Group: constants.KubewardenPoliciesGroup, Version: "v1", Kind: "PolicyServerList"},
+		{Group: constants.KubewardenPoliciesGroup, Version: "v1", Kind: "ClusterAdmissionPolicyList"},
+		{Group: constants.KubewardenPoliciesGroup, Version: "v1", Kind: "AdmissionPolicyList"},
+		{Group: constants.KubewardenPoliciesGroup, Version: "v1", Kind: "ClusterAdmissionPolicyGroupList"},
+		{Group: constants.KubewardenPoliciesGroup, Version: "v1", Kind: "AdmissionPolicyGroupList"},
 	}
 
 	for _, gvk := range gvks {

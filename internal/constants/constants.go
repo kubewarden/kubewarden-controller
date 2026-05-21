@@ -56,6 +56,8 @@ const (
 
 	PolicyServerIndexKey = ".spec.policyServer"
 
+	KubewardenPoliciesGroup = "policies.kubewarden.io"
+
 	KubewardenFinalizerPre114 = "kubewarden"
 	KubewardenFinalizer       = "kubewarden.io/finalizer"
 
