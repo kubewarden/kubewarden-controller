@@ -60,7 +60,6 @@ func TestMain(m *testing.M) {
 					"--set", "policyServer.image.tag=dev",
 					"--set", "logLevel=debug",
 					"--set", "auditScanner.logLevel=debug",
-					"--set", "policyServer.enabled=true",
 				),
 			)
 			if err != nil {
