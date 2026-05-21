@@ -56,15 +56,9 @@ metadata:
   name: kubewarden-helm-charts
 spec:
   charts:
-    - name: kubewarden-crds
-      repoURL: https://charts.kubewarden.io
-      version: 1.28.0-beta.1
     - name: kubewarden-controller
       repoURL: https://charts.kubewarden.io
-      version: 5.14.0-beta.1
-    - name: kubewarden-defaults
-      repoURL: https://charts.kubewarden.io
-      version: 3.14.0-beta.1
+      version: 6.0.0-alpha.1
     - name: policy-reporter
       version: 3.7.4
       repoURL: https://kyverno.github.io/policy-reporter
