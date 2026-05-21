@@ -1,8 +1,6 @@
 tilt_settings_file = "./tilt-settings.yaml"
 settings = read_yaml(tilt_settings_file)
 
-update_settings(k8s_upsert_timeout_secs=300)
-
 # Create the kubewarden namespace
 # This is required since the helm() function doesn't support the create_namespace flag
 load("ext://namespace", "namespace_create")
@@ -13,6 +11,11 @@ registry = settings.get("registry")
 controller_image = settings.get("controller").get("image")
 audit_scanner_image = settings.get("audit-scanner").get("image")
 policy_server_image = settings.get("policy-server").get("image")
+
+update_settings(
+    k8s_upsert_timeout_secs=300,
+    suppress_unused_image_warnings=[registry + "/" + policy_server_image],
+)
 
 kubewarden_yaml = helm(
     "./charts/kubewarden-controller",
@@ -44,20 +47,18 @@ k8s_resource(
         'clusteradmissionpolicies.policies.kubewarden.io:CustomResourceDefinition',
         'admissionpolicygroups.policies.kubewarden.io:CustomResourceDefinition',
         'clusteradmissionpolicygroups.policies.kubewarden.io:CustomResourceDefinition',
+        'clusterreports.openreports.io:CustomResourceDefinition',
+        'reports.openreports.io:CustomResourceDefinition',
+        'clusterpolicyreports.wgpolicyk8s.io:CustomResourceDefinition',
+        'policyreports.wgpolicyk8s.io:CustomResourceDefinition',
     ],
 )
 
 # Wait for controller deployment to be ready
 k8s_resource(
-    'kubewarden:deployment',
+    'kubewarden-kubewarden-controller',
     new_name='kubewarden-controller',
     resource_deps=['kubewarden-crds'],
-)
-
-# Default PolicyServer resource dependency
-k8s_resource(
-    'default',
-    resource_deps=['kubewarden-controller', 'policy_server_tilt'],
 )
 
 # Tell tilt about the image used by the PolicyServer CRD
@@ -158,10 +159,11 @@ docker_build(
 )
 
 # Trigger PolicyServer pod restart by updating annotations when image changes
-# Runs automatically whenever the policy-server image is rebuilt
+# The default PolicyServer is created by the controller from the defaults ConfigMap,
+# so we depend on the controller being ready before patching.
 local_resource(
     "restart_policy_server",
     "kubectl get policyserver default >/dev/null 2>&1 && kubectl patch policyserver default --type=merge -p '{\"spec\":{\"annotations\":{\"restart\":\"'$(date +%s)'\"}}}'  || true",
-    resource_deps=["default"],
+    resource_deps=["kubewarden-controller"],
     trigger_mode=TRIGGER_MODE_AUTO,
 )
