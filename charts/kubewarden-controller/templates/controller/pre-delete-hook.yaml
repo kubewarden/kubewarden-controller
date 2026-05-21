@@ -36,7 +36,7 @@ spec:
       containers:
         - name: pre-delete-job
           image: '{{ template "system_default_registry" . }}{{ .Values.preDeleteJob.image.repository }}:{{ .Values.preDeleteJob.image.tag }}'
-          command: ["kubectl", "delete", "policyservers,clusteradmissionpolicies,admissionpolicies,clusteradmissionpolicygroups,admissionpolicygroups", "-A", "-l", "kubewarden.io/managed-by=kubewarden-controller-defaults", "--ignore-not-found"]
+          command: ["kubectl", "delete", "policyservers,clusteradmissionpolicies,admissionpolicies,clusteradmissionpolicygroups,admissionpolicygroups", "-n", "{{ .Release.Namespace }}", "-l", "kubewarden.io/managed-by=kubewarden-controller-defaults", "--ignore-not-found"]
           env:
             - name: KUBERLR_ALLOWDOWNLOAD
               value: "1"
