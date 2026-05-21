@@ -8,7 +8,9 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,7 +39,6 @@ type DefaultsApplierReconciler struct {
 func (r *DefaultsApplierReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("configmap", req.NamespacedName)
 
-	// Phase 1: Read ConfigMap
 	var cm corev1.ConfigMap
 	if err := r.Get(ctx, req.NamespacedName, &cm); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -50,16 +51,10 @@ func (r *DefaultsApplierReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, fmt.Errorf("failed to get ConfigMap: %w", err)
 	}
 
-	// Phase 2: Apply desired resources
 	decoder := serializer.NewCodecFactory(r.Scheme).UniversalDeserializer()
 	desired := make(map[resourceKey]bool)
 
 	for key, yamlData := range cm.Data {
-		if len(key) < 5 || key[len(key)-5:] != ".yaml" {
-			// Skip non-YAML keys
-			continue
-		}
-
 		obj, gvk, err := decoder.Decode([]byte(yamlData), nil, nil)
 		if err != nil {
 			log.Error(err, "failed to decode resource from ConfigMap", "key", key)
@@ -87,7 +82,6 @@ func (r *DefaultsApplierReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	// Phase 3: Clean up stale managed resources
 	if err := r.cleanupStale(ctx, desired); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to cleanup stale resources: %w", err)
 	}
@@ -175,26 +169,24 @@ func (r *DefaultsApplierReconciler) cleanupStale(ctx context.Context, desired ma
 		constants.DefaultsManagedByLabelKey: constants.DefaultsManagedByLabelValue,
 	}
 
-	// List all managed resource types
-	resourceLists := []client.ObjectList{
-		&policiesv1.PolicyServerList{},
-		&policiesv1.ClusterAdmissionPolicyList{},
-		&policiesv1.AdmissionPolicyList{},
-		&policiesv1.ClusterAdmissionPolicyGroupList{},
-		&policiesv1.AdmissionPolicyGroupList{},
+	gvks := []schema.GroupVersionKind{
+		{Group: "policies.kubewarden.io", Version: "v1", Kind: "PolicyServerList"},
+		{Group: "policies.kubewarden.io", Version: "v1", Kind: "ClusterAdmissionPolicyList"},
+		{Group: "policies.kubewarden.io", Version: "v1", Kind: "AdmissionPolicyList"},
+		{Group: "policies.kubewarden.io", Version: "v1", Kind: "ClusterAdmissionPolicyGroupList"},
+		{Group: "policies.kubewarden.io", Version: "v1", Kind: "AdmissionPolicyGroupList"},
 	}
 
-	for _, list := range resourceLists {
+	for _, gvk := range gvks {
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(gvk)
+
 		if err := r.List(ctx, list, managedSelector); err != nil {
 			return fmt.Errorf("failed to list managed resources: %w", err)
 		}
 
-		items, err := extractItems(list)
-		if err != nil {
-			return err
-		}
-
-		for _, item := range items {
+		for i := range list.Items {
+			item := &list.Items[i]
 			rk := resourceKey{
 				gvk:       item.GetObjectKind().GroupVersionKind().String(),
 				name:      item.GetName(),
@@ -232,40 +224,3 @@ func (rk resourceKey) String() string {
 	return fmt.Sprintf("%s/%s/%s", rk.gvk, rk.namespace, rk.name)
 }
 
-// extractItems extracts client.Objects from a typed list.
-func extractItems(list client.ObjectList) ([]client.Object, error) {
-	switch v := list.(type) {
-	case *policiesv1.PolicyServerList:
-		items := make([]client.Object, len(v.Items))
-		for i := range v.Items {
-			items[i] = &v.Items[i]
-		}
-		return items, nil
-	case *policiesv1.ClusterAdmissionPolicyList:
-		items := make([]client.Object, len(v.Items))
-		for i := range v.Items {
-			items[i] = &v.Items[i]
-		}
-		return items, nil
-	case *policiesv1.AdmissionPolicyList:
-		items := make([]client.Object, len(v.Items))
-		for i := range v.Items {
-			items[i] = &v.Items[i]
-		}
-		return items, nil
-	case *policiesv1.ClusterAdmissionPolicyGroupList:
-		items := make([]client.Object, len(v.Items))
-		for i := range v.Items {
-			items[i] = &v.Items[i]
-		}
-		return items, nil
-	case *policiesv1.AdmissionPolicyGroupList:
-		items := make([]client.Object, len(v.Items))
-		for i := range v.Items {
-			items[i] = &v.Items[i]
-		}
-		return items, nil
-	default:
-		return nil, fmt.Errorf("unknown list type: %T", list)
-	}
-}
