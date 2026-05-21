@@ -1,6 +1,6 @@
 use anyhow::Result;
 use opentelemetry::{KeyValue, global};
-use opentelemetry_otlp::{ExportConfig, WithExportConfig, WithTonicConfig};
+use opentelemetry_otlp::WithTonicConfig;
 
 mod policy_evaluations_total;
 pub use policy_evaluations_total::add_policy_evaluation;
@@ -15,7 +15,6 @@ pub fn setup_metrics() -> Result<()> {
     let metric_exporter = opentelemetry_otlp::MetricExporter::builder()
         .with_tonic()
         .with_tls_config(build_client_tls_config_from_env("METRICS")?)
-        .with_export_config(ExportConfig::default())
         .build()?;
 
     let periodic_reader =
