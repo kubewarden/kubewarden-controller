@@ -83,7 +83,7 @@ AUDIT_SCANNER_HAULER_VERSION=$(get_hauler_image_version "adm-controller/audit-sc
 compare_version "audit-scanner" "$AUDIT_SCANNER_CHART_VERSION" "$AUDIT_SCANNER_HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate policy-server image
-POLICY_SERVER_CHART_VERSION=$(yq eval '.defaults.policyServer.image.tag' "$CONTROLLER_VALUES")
+POLICY_SERVER_CHART_VERSION=$(yq eval '.policyServer.image.tag' "$CONTROLLER_VALUES")
 POLICY_SERVER_HAULER_VERSION=$(get_hauler_image_version "adm-controller/policy-server")
 compare_version "policy-server" "$POLICY_SERVER_CHART_VERSION" "$POLICY_SERVER_HAULER_VERSION" "$CONTROLLER_VALUES"
 
@@ -124,32 +124,32 @@ echo "==============================="
 echo
 
 # Validate allow-privilege-escalation-psp policy
-POLICY_VERSION=$(yq eval '.defaults.recommendedPolicies.allowPrivilegeEscalationPolicy.module.tag' "$CONTROLLER_VALUES")
+POLICY_VERSION=$(yq eval '.recommendedPolicies.allowPrivilegeEscalationPolicy.module.tag' "$CONTROLLER_VALUES")
 HAULER_VERSION=$(get_hauler_image_version "policies/allow-privilege-escalation-psp")
 compare_version "allow-privilege-escalation-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate capabilities-psp policy
-POLICY_VERSION=$(yq eval '.defaults.recommendedPolicies.capabilitiesPolicy.module.tag' "$CONTROLLER_VALUES")
+POLICY_VERSION=$(yq eval '.recommendedPolicies.capabilitiesPolicy.module.tag' "$CONTROLLER_VALUES")
 HAULER_VERSION=$(get_hauler_image_version "policies/capabilities-psp")
 compare_version "capabilities-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate host-namespaces-psp policy
-POLICY_VERSION=$(yq eval '.defaults.recommendedPolicies.hostNamespacePolicy.module.tag' "$CONTROLLER_VALUES")
+POLICY_VERSION=$(yq eval '.recommendedPolicies.hostNamespacePolicy.module.tag' "$CONTROLLER_VALUES")
 HAULER_VERSION=$(get_hauler_image_version "policies/host-namespaces-psp")
 compare_version "host-namespaces-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate hostpaths-psp policy
-POLICY_VERSION=$(yq eval '.defaults.recommendedPolicies.hostPathsPolicy.module.tag' "$CONTROLLER_VALUES")
+POLICY_VERSION=$(yq eval '.recommendedPolicies.hostPathsPolicy.module.tag' "$CONTROLLER_VALUES")
 HAULER_VERSION=$(get_hauler_image_version "policies/hostpaths-psp")
 compare_version "hostpaths-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate pod-privileged policy
-POLICY_VERSION=$(yq eval '.defaults.recommendedPolicies.podPrivilegedPolicy.module.tag' "$CONTROLLER_VALUES")
+POLICY_VERSION=$(yq eval '.recommendedPolicies.podPrivilegedPolicy.module.tag' "$CONTROLLER_VALUES")
 HAULER_VERSION=$(get_hauler_image_version "policies/pod-privileged")
 compare_version "pod-privileged" "$POLICY_VERSION" "$HAULER_VERSION" "$CONTROLLER_VALUES"
 
 # Validate user-group-psp policy
-POLICY_VERSION=$(yq eval '.defaults.recommendedPolicies.userGroupPolicy.module.tag' "$CONTROLLER_VALUES")
+POLICY_VERSION=$(yq eval '.recommendedPolicies.userGroupPolicy.module.tag' "$CONTROLLER_VALUES")
 HAULER_VERSION=$(get_hauler_image_version "policies/user-group-psp")
 compare_version "user-group-psp" "$POLICY_VERSION" "$HAULER_VERSION" "$CONTROLLER_VALUES"
 

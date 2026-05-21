@@ -401,11 +401,11 @@ function install_kubewarden() {
     echo -e "${GREEN}  Installing kubewarden-controller (unified chart)...${NC}"
     helm upgrade --install kubewarden-controller ./charts/kubewarden-controller \
         -n "$KUBEWARDEN_NAMESPACE" \
-        --set controller.replicas=1 \
+        --set replicas=1 \
         --wait
 
     echo -e "${GREEN}  Waiting for adm-controller rollout...${NC}"
-    kubectl rollout status deployment/kubewarden-controller \
+    kubectl rollout status deployment/kubewarden-kubewarden-controller \
         -n "$KUBEWARDEN_NAMESPACE" --timeout=3m
 }
 
@@ -414,8 +414,8 @@ function build_image_flags() {
     # policy-server image when POLICY_SERVER_IMAGE is set.
     IMAGE_FLAGS=()
     if [[ -n "${POLICY_SERVER_IMAGE}" ]]; then
-        IMAGE_FLAGS+=(--set "defaults.policyServer.image.repository=${POLICY_SERVER_IMAGE%:*}")
-        IMAGE_FLAGS+=(--set "defaults.policyServer.image.tag=${POLICY_SERVER_IMAGE##*:}")
+        IMAGE_FLAGS+=(--set "policyServer.image.repository=${POLICY_SERVER_IMAGE%:*}")
+        IMAGE_FLAGS+=(--set "policyServer.image.tag=${POLICY_SERVER_IMAGE##*:}")
     fi
 }
 
@@ -441,15 +441,14 @@ function configure_policy_server() {
 
     helm upgrade --install kubewarden-controller ./charts/kubewarden-controller \
         -n "$KUBEWARDEN_NAMESPACE" \
-        --set controller.replicas=1 \
-        --set defaults.enabled=true \
-        --set 'defaults.policyServer.sigstoreTrustConfig'="$SIGSTORE_TRUST_CONFIGMAP" \
-        --set 'defaults.policyServer.verificationConfig'="$VERIFICATION_CONFIGMAP" \
-        --set 'defaults.policyServer.insecureSources[0]=registry.local:5001' \
-        --set 'defaults.policyServer.env[0].name=KUBEWARDEN_LOG_LEVEL' \
-        --set 'defaults.policyServer.env[0].value=info' \
-        --set 'defaults.policyServer.env[1].name=RUST_BACKTRACE' \
-        --set 'defaults.policyServer.env[1].value=1' \
+        --set replicas=1 \
+        --set 'policyServer.sigstoreTrustConfig'="$SIGSTORE_TRUST_CONFIGMAP" \
+        --set 'policyServer.verificationConfig'="$VERIFICATION_CONFIGMAP" \
+        --set 'policyServer.insecureSources[0]=registry.local:5001' \
+        --set 'policyServer.env[0].name=KUBEWARDEN_LOG_LEVEL' \
+        --set 'policyServer.env[0].value=info' \
+        --set 'policyServer.env[1].name=RUST_BACKTRACE' \
+        --set 'policyServer.env[1].value=1' \
         "${image_flags[@]}" \
         --wait
     # Policy-server readiness is confirmed when the ClusterAdmissionPolicy
@@ -465,12 +464,11 @@ function install_kubewarden_no_sigstore() {
 
     helm upgrade --install kubewarden-controller ./charts/kubewarden-controller \
         -n "$KUBEWARDEN_NAMESPACE" \
-        --set controller.replicas=1 \
-        --set defaults.enabled=true \
-        --set 'defaults.policyServer.env[0].name=KUBEWARDEN_LOG_LEVEL' \
-        --set 'defaults.policyServer.env[0].value=info' \
-        --set 'defaults.policyServer.env[1].name=RUST_BACKTRACE' \
-        --set 'defaults.policyServer.env[1].value=1' \
+        --set replicas=1 \
+        --set 'policyServer.env[0].name=KUBEWARDEN_LOG_LEVEL' \
+        --set 'policyServer.env[0].value=info' \
+        --set 'policyServer.env[1].name=RUST_BACKTRACE' \
+        --set 'policyServer.env[1].value=1' \
         "${image_flags[@]}" \
         --wait
 
