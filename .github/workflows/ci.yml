@@ -259,6 +259,7 @@ jobs:
 
   fmt-rust-per-crate:
     needs: calculate-crates-matrix
+    if: needs.calculate-crates-matrix.result == 'success'
     name: Rustfmt (${{ matrix.crate }})
     runs-on: ubuntu-latest
     strategy:
@@ -277,6 +278,7 @@ jobs:
 
   clippy-rust-per-crate:
     needs: calculate-crates-matrix
+    if: needs.calculate-crates-matrix.result == 'success'
     name: Clippy (${{ matrix.crate }})
     runs-on: ubuntu-latest
     strategy:
@@ -293,6 +295,7 @@ jobs:
 
   unit-tests-rust-per-crate:
     needs: calculate-crates-matrix
+    if: needs.calculate-crates-matrix.result == 'success'
     name: Unit tests (${{ matrix.crate }})
     runs-on: ubuntu-latest
     strategy:
