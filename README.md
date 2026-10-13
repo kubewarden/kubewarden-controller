@@ -252,4 +252,3 @@ See [SECURITY.md](https://github.com/kubewarden/community/blob/main/SECURITY.md)
 # Changelog
 
 See [GitHub Releases content](https://github.com/kubewarden/adm-controller/releases).
-test
