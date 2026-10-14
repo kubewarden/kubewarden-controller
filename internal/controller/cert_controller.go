@@ -34,6 +34,12 @@ type CertReconciler struct {
 func (r *CertReconciler) Start(ctx context.Context) error {
 	r.Log.Info("Starting CertController ticker")
 
+	// Certificates can be expired or close to expiry when the controller
+	// starts, for example after a long downtime. Do not wait for the first tick.
+	if err := r.reconcile(ctx); err != nil {
+		r.Log.Error(err, "Failed to reconcile certificates")
+	}
+
 	ticker := time.NewTicker(tickerDuration)
 	defer ticker.Stop()
 
@@ -44,7 +50,7 @@ func (r *CertReconciler) Start(ctx context.Context) error {
 			return nil
 		case <-ticker.C:
 			if err := r.reconcile(ctx); err != nil {
-				r.Log.Error(err, "Failed to")
+				r.Log.Error(err, "Failed to reconcile certificates")
 			}
 		}
 	}

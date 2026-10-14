@@ -350,6 +350,90 @@ var _ = Describe("Cert controller", func() {
 		})
 	})
 
+	Context("Certificate already expired when the controller starts", Ordered, func() {
+		const (
+			webhookServerServiceName    = "startup-test-webhook-service"
+			caRootSecretName            = "startup-test-ca-root"
+			webhookServerCertSecretName = "startup-test-webhook-server-cert"
+		)
+
+		BeforeAll(func() {
+			By("generating the CA cert")
+			caCert, caPrivateKey, err := certs.GenerateCA(time.Now(), time.Now().Add(constants.CACertExpiration))
+			Expect(err).ToNot(HaveOccurred())
+			By("creating the CA cert secret")
+			caRootSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: deploymentsNamespace,
+					Name:      caRootSecretName,
+				},
+				Type: corev1.SecretTypeOpaque,
+				Data: map[string][]byte{
+					constants.CARootCert:       caCert,
+					constants.CARootPrivateKey: caPrivateKey,
+				},
+			}
+			Expect(k8sClient.Create(ctx, caRootSecret)).To(Succeed())
+
+			By("generating an expired webhook server cert")
+			webhookServiceDNSName := certs.DNSName(webhookServerServiceName, deploymentsNamespace)
+			webhookServerCert, webhookServerPrivateKey, err := certs.GenerateCert(caCert, caPrivateKey, time.Now().Add(-constants.ServerCertExpiration), time.Now().Add(-24*time.Hour), webhookServiceDNSName)
+			Expect(err).ToNot(HaveOccurred())
+			By("creating the webhook server cert secret")
+			webhookServerCertSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: deploymentsNamespace,
+					Name:      webhookServerCertSecretName,
+				},
+				Type: corev1.SecretTypeOpaque,
+				Data: map[string][]byte{
+					constants.ServerCert:       webhookServerCert,
+					constants.ServerPrivateKey: webhookServerPrivateKey,
+				},
+			}
+			Expect(k8sClient.Create(ctx, webhookServerCertSecret)).To(Succeed())
+
+			By("starting the cert controller")
+			certController := CertReconciler{
+				Client:                      k8sClient,
+				DeploymentsNamespace:        deploymentsNamespace,
+				WebhookServiceName:          webhookServerServiceName,
+				CARootSecretName:            caRootSecretName,
+				WebhookServerCertSecretName: webhookServerCertSecretName,
+			}
+			startCtx, cancel := context.WithCancel(ctx)
+			done := make(chan error)
+			go func() {
+				done <- certController.Start(startCtx)
+			}()
+			DeferCleanup(func() {
+				cancel()
+				Eventually(done).WithTimeout(timeout).WithPolling(pollInterval).Should(Receive(Succeed()))
+			})
+		})
+
+		It("should rotate the webhook server certificate without waiting for the ticker", func() {
+			Expect(tickerDuration).To(BeNumerically(">", timeout),
+				"the ticker must not fire during the test, or the test cannot show the reconcile at startup")
+
+			caRootSecret := &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: caRootSecretName, Namespace: deploymentsNamespace}, caRootSecret)).To(Succeed())
+			caCert, _, err := certs.ExtractCARootFromSecret(caRootSecret)
+			Expect(err).ToNot(HaveOccurred())
+			pool, err := certs.NewCertPool(caCert)
+			Expect(err).ToNot(HaveOccurred())
+			dnsName := certs.DNSName(webhookServerServiceName, deploymentsNamespace)
+
+			Eventually(func() error {
+				webhookServerCertSecret := &corev1.Secret{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{Name: webhookServerCertSecretName, Namespace: deploymentsNamespace}, webhookServerCertSecret); err != nil {
+					return err
+				}
+				return certs.VerifyCert(webhookServerCertSecret.Data[constants.ServerCert], webhookServerCertSecret.Data[constants.ServerPrivateKey], pool, dnsName, time.Now())
+			}).WithTimeout(timeout).WithPolling(pollInterval).Should(Succeed())
+		})
+	})
+
 	Context("Old CA root cleanup", Ordered, func() {
 		const (
 			webhookServerServiceName           = "old-ca-root-cleanup-test-webhook-service"
