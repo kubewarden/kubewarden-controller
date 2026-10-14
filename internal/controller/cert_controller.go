@@ -10,6 +10,7 @@ import (
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,6 +20,25 @@ import (
 )
 
 const tickerDuration = 12 * time.Hour
+
+const (
+	startupReconcileFirstDelay = 5 * time.Second
+	startupReconcileFactor     = 2
+	startupReconcileJitter     = 0.1
+	startupReconcileTries      = 8
+	startupReconcileMaxDelay   = time.Minute
+)
+
+// startupReconcileBackoff makes up to 8 tries in about 4 minutes: it waits 5s, 10s, 20s, 40s, then 1m between tries.
+func startupReconcileBackoff() wait.Backoff {
+	return wait.Backoff{
+		Duration: startupReconcileFirstDelay,
+		Factor:   startupReconcileFactor,
+		Jitter:   startupReconcileJitter,
+		Steps:    startupReconcileTries,
+		Cap:      startupReconcileMaxDelay,
+	}
+}
 
 type CertReconciler struct {
 	client.Client
@@ -36,8 +56,16 @@ func (r *CertReconciler) Start(ctx context.Context) error {
 
 	// Certificates can be expired or close to expiry when the controller
 	// starts, for example after a long downtime. Do not wait for the first tick.
-	if err := r.reconcile(ctx); err != nil {
-		r.Log.Error(err, "Failed to reconcile certificates")
+	// Other reconcilers write the same secrets at startup, so a conflict is
+	// likely. Retry for a few minutes before the ticker takes over.
+	if err := wait.ExponentialBackoffWithContext(ctx, startupReconcileBackoff(), func(ctx context.Context) (bool, error) {
+		if err := r.reconcile(ctx); err != nil {
+			r.Log.Error(err, "Failed to reconcile certificates at startup, retrying")
+			return false, nil
+		}
+		return true, nil
+	}); err != nil {
+		r.Log.Error(err, "Failed to reconcile certificates at startup, waiting for the next tick", "tick", tickerDuration)
 	}
 
 	ticker := time.NewTicker(tickerDuration)
