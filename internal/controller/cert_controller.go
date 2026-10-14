@@ -9,6 +9,7 @@ import (
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
@@ -42,11 +43,12 @@ func startupReconcileBackoff() wait.Backoff {
 
 type CertReconciler struct {
 	client.Client
-	Log                         logr.Logger
-	DeploymentsNamespace        string
-	WebhookServiceName          string
-	CARootSecretName            string
-	WebhookServerCertSecretName string
+	Log                              logr.Logger
+	DeploymentsNamespace             string
+	WebhookServiceName               string
+	CARootSecretName                 string
+	WebhookServerCertSecretName      string
+	AuditScannerClientCertSecretName string
 }
 
 // Start begins the periodic reconciler.
@@ -113,6 +115,9 @@ func (r *CertReconciler) reconcile(ctx context.Context) error {
 	}
 	if err := r.reconcileServerCerts(ctx, caCertSecret); err != nil {
 		return fmt.Errorf("failed to reconcile server certs: %w", err)
+	}
+	if err := r.reconcileAuditScannerClientCert(ctx, caCertSecret); err != nil {
+		return fmt.Errorf("failed to reconcile audit scanner client cert: %w", err)
 	}
 
 	return nil
@@ -248,7 +253,8 @@ func (r *CertReconciler) reconcileServerCerts(ctx context.Context, caRootSecret 
 	}
 
 	serverCertSecretList := &corev1.SecretList{}
-	err := r.List(ctx,
+	err := r.List(
+		ctx,
 		serverCertSecretList,
 		client.InNamespace(r.DeploymentsNamespace),
 		client.MatchingLabels{
@@ -304,6 +310,60 @@ func (r *CertReconciler) reconcileServerCert(ctx context.Context, serverCertSecr
 		}
 
 		r.Log.Info("Certificate rotated successfully", "dnsName", dnsName)
+	}
+
+	return nil
+}
+
+// reconcileAuditScannerClientCert rotates the client certificate of the audit scanner if it is about to expire,
+// or if it is not signed by the current CA root.
+// The Helm chart creates the secret. If the secret does not exist, there is nothing to rotate.
+func (r *CertReconciler) reconcileAuditScannerClientCert(ctx context.Context, caRootSecret *corev1.Secret) error {
+	clientCertSecret := &corev1.Secret{}
+	err := r.Get(ctx, types.NamespacedName{Name: r.AuditScannerClientCertSecretName, Namespace: r.DeploymentsNamespace}, clientCertSecret)
+	if apierrors.IsNotFound(err) {
+		r.Log.Info("Audit scanner client cert secret not found, skipping its rotation", "secret", r.AuditScannerClientCertSecretName)
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to get audit scanner client cert secret: %w", err)
+	}
+
+	cert, privateKey, err := certs.ExtractServerCertFromSecret(clientCertSecret)
+	if err != nil {
+		return fmt.Errorf("failed to extract client cert from secret: %w", err)
+	}
+
+	caCert, caPrivateKey, err := certs.ExtractCARootFromSecret(caRootSecret)
+	if err != nil {
+		return fmt.Errorf("failed to extract CA root from secret: %w", err)
+	}
+
+	pool, err := certs.NewCertPool(caCert)
+	if err != nil {
+		return fmt.Errorf("failed to create cert pool: %w", err)
+	}
+
+	// The audit scanner certificate is a client certificate. An empty DNS name skips the check of the name, because
+	// a server does not match the name of a client. VerifyCert still requires the serverAuth usage. That is not a
+	// problem: the Helm chart and GenerateCert both create the certificate with serverAuth and clientAuth.
+	if err = certs.VerifyCert(cert, privateKey, pool, "", time.Now().Add(constants.CertLookahead)); err != nil {
+		r.Log.Info("Audit scanner client certificate verification failed, rotating the certificate", "verification error", err)
+
+		var newCert, newPrivateKey []byte
+		newCert, newPrivateKey, err = certs.GenerateCert(caCert, caPrivateKey, time.Now(), time.Now().Add(constants.ServerCertExpiration), constants.AuditScannerClientCertCommonName)
+		if err != nil {
+			return fmt.Errorf("failed to generate client cert: %w", err)
+		}
+
+		clientCertSecret.Data[constants.ServerCert] = newCert
+		clientCertSecret.Data[constants.ServerPrivateKey] = newPrivateKey
+
+		if err = r.Update(ctx, clientCertSecret); err != nil {
+			return fmt.Errorf("failed to update secret: %w", err)
+		}
+
+		r.Log.Info("Audit scanner client certificate rotated successfully")
 	}
 
 	return nil
