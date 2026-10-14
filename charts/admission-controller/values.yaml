@@ -169,7 +169,7 @@ alwaysAcceptAdmissionReviewsOnDeploymentsNamespace: true
 # The default list contains Kubernetes resources that are considered
 # safe to be validated or mutated by namespaced policies.
 # @schema type:[array, null]
-namespacedPoliciesAllowedResources: 
+namespacedPoliciesAllowedResources:
   - apiGroups: # @schema minItems:1; required:true; item:string
       - ""
     resources: # @schema minItems:1; required:true; item:string
@@ -482,6 +482,7 @@ policyServer:
         - namespaces
         - pods
         - services
+        - configmaps
     - apiGroup: "networking.k8s.io"
       resources:
         - ingresses
