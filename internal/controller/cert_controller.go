@@ -56,10 +56,14 @@ type CertReconciler struct {
 func (r *CertReconciler) Start(ctx context.Context) error {
 	r.Log.Info("Starting CertController ticker")
 
-	// Certificates can be expired or close to expiry when the controller
-	// starts, for example after a long downtime. Do not wait for the first tick.
-	// Other reconcilers write the same secrets at startup, so a conflict is
-	// likely. Retry for a few minutes before the ticker takes over.
+	// The certificates can be expired when the controller starts, for example
+	// after a long downtime. Then the webhooks with failurePolicy Fail block
+	// admission until the certificates rotate. Do not wait for the first tick.
+	// A failed pass at startup must not wait 12 hours for the next tick.
+	// The writes of the secrets and of the webhook configurations already retry
+	// on a conflict. This backoff covers the other failures: the API server is
+	// not reachable, or a conflict lasts longer than the retry of one write.
+	// Retry for a few minutes before the ticker takes over.
 	if err := wait.ExponentialBackoffWithContext(ctx, startupReconcileBackoff(), func(ctx context.Context) (bool, error) {
 		if err := r.reconcile(ctx); err != nil {
 			r.Log.Error(err, "Failed to reconcile certificates at startup, retrying")
@@ -123,6 +127,32 @@ func (r *CertReconciler) reconcile(ctx context.Context) error {
 	return nil
 }
 
+// updateSecretWithRetry updates a secret. If the API server reports a conflict, it tries again.
+// On each try it reads the secret again and applies mutate to the fresh copy. As a result, the update
+// uses the latest resourceVersion. The PolicyServer reconciler runs on the same leader and writes
+// the same secrets when its informers sync, so a conflict is possible, in particular at startup.
+// After a successful call, secret holds the state that the API server stored.
+func (r *CertReconciler) updateSecretWithRetry(ctx context.Context, secret *corev1.Secret, mutate func(secret *corev1.Secret)) error {
+	key := client.ObjectKeyFromObject(secret)
+
+	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		if err := r.Get(ctx, key, secret); err != nil {
+			return fmt.Errorf("failed to get secret: %w", err)
+		}
+		if secret.Data == nil {
+			secret.Data = make(map[string][]byte)
+		}
+		mutate(secret)
+
+		return r.Update(ctx, secret)
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update secret %q: %w", key, err)
+	}
+
+	return nil
+}
+
 // reconcileCARoot reconciles the CA root certificate by rotating it if it is about to expire.
 // It saves the old CA root certificate in the secret so that we can remove it after it is no longer valid.
 // Also, it updates the webhook configurations by injecting a bundle containing the new and old CA root certificates.
@@ -141,10 +171,12 @@ func (r *CertReconciler) reconcileCARoot(ctx context.Context, caRootSecret *core
 			return fmt.Errorf("failed to generate CA cert: %w", err)
 		}
 
-		caRootSecret.Data[constants.CARootCert] = caCert
-		caRootSecret.Data[constants.CARootPrivateKey] = caPrivateKey
-		caRootSecret.Data[constants.OldCARootCert] = oldCACert
-		if err = r.Update(ctx, caRootSecret); err != nil {
+		err = r.updateSecretWithRetry(ctx, caRootSecret, func(secret *corev1.Secret) {
+			secret.Data[constants.CARootCert] = caCert
+			secret.Data[constants.CARootPrivateKey] = caPrivateKey
+			secret.Data[constants.OldCARootCert] = oldCACert
+		})
+		if err != nil {
 			return fmt.Errorf("failed to update CA root secret: %w", err)
 		}
 
@@ -176,8 +208,10 @@ func (r *CertReconciler) reconcileOldCARoot(ctx context.Context, caRootSecret *c
 			return fmt.Errorf("failed to extract CA root from secret: %w", err)
 		}
 
-		delete(caRootSecret.Data, constants.OldCARootCert)
-		if err = r.Update(ctx, caRootSecret); err != nil {
+		err = r.updateSecretWithRetry(ctx, caRootSecret, func(secret *corev1.Secret) {
+			delete(secret.Data, constants.OldCARootCert)
+		})
+		if err != nil {
 			return fmt.Errorf("failed to update CA root secret: %w", err)
 		}
 
@@ -192,9 +226,8 @@ func (r *CertReconciler) reconcileOldCARoot(ctx context.Context, caRootSecret *c
 	return nil
 }
 
-// reconcileWebhookConfigurations reconciles the webhook configurations by injecting the CA bundle.
-// Note that we are using RetryOnConflict to handle potential conflicts when updating the webhook configurations.
-// This is necessary because the webhook configurations could be update by the AdmissionPolicy and ClusterAdmissionPolicy controllers.
+// reconcileWebhookConfigurations injects the CA bundle into the webhook configurations.
+// It uses RetryOnConflict because the policy reconcilers update the same webhook configurations.
 func (r *CertReconciler) reconcileWebhookConfigurations(ctx context.Context, caBundle []byte) error {
 	validatingWebhookConfigurationList := &admissionregistrationv1.ValidatingWebhookConfigurationList{}
 	if err := r.List(ctx, validatingWebhookConfigurationList, client.MatchingLabels{
@@ -302,10 +335,11 @@ func (r *CertReconciler) reconcileServerCert(ctx context.Context, serverCertSecr
 			return fmt.Errorf("failed to generate cert: %w", err)
 		}
 
-		serverCertSecret.Data[constants.ServerCert] = newCert
-		serverCertSecret.Data[constants.ServerPrivateKey] = newPrivateKey
-
-		if err = r.Update(ctx, serverCertSecret); err != nil {
+		err = r.updateSecretWithRetry(ctx, serverCertSecret, func(secret *corev1.Secret) {
+			secret.Data[constants.ServerCert] = newCert
+			secret.Data[constants.ServerPrivateKey] = newPrivateKey
+		})
+		if err != nil {
 			return fmt.Errorf("failed to update secret: %w", err)
 		}
 
@@ -356,10 +390,11 @@ func (r *CertReconciler) reconcileAuditScannerClientCert(ctx context.Context, ca
 			return fmt.Errorf("failed to generate client cert: %w", err)
 		}
 
-		clientCertSecret.Data[constants.ServerCert] = newCert
-		clientCertSecret.Data[constants.ServerPrivateKey] = newPrivateKey
-
-		if err = r.Update(ctx, clientCertSecret); err != nil {
+		err = r.updateSecretWithRetry(ctx, clientCertSecret, func(secret *corev1.Secret) {
+			secret.Data[constants.ServerCert] = newCert
+			secret.Data[constants.ServerPrivateKey] = newPrivateKey
+		})
+		if err != nil {
 			return fmt.Errorf("failed to update secret: %w", err)
 		}
 
