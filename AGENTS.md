@@ -57,7 +57,7 @@ Run these commands from the root of the repository.
 - `make test-e2e` — Build the three images, then run `go test ./e2e/ -v`
 - `make test-all` — `test`, `helm-unittest` and `test-e2e`
 - `make fmt-go` — `go fmt ./...`
-- `make lint-go` — Run golangci-lint v2.13.1. The Makefile downloads it into `bin/`.
+- `make lint-go` — Run golangci-lint. The Makefile pins the version and downloads it into `bin/`.
 - `make lint-go-fix` — Run golangci-lint with `--fix`
 - `make lint` — `lint-go` and `lint-rust`
 - `make generate` — Generate all the generated files again. Read the section that follows.
