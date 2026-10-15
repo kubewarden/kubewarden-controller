@@ -123,6 +123,7 @@ additionalAnnotations: {}
 # securityContext of the container
 containerSecurityContext:
   allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
   capabilities:
     drop:
       - ALL
@@ -133,12 +134,13 @@ podSecurityContext:
   runAsNonRoot: true
   seccompProfile:
     type: RuntimeDefault
-# SecurityContext to be used in the pre-delete-hook job container and pod.
-# The content of the next fields will be set directly as the securityContext
-# of the container and pod used in the pre-delete-hook job.
+# SecurityContext to be used in the pre-delete-hook and post-install-hook job
+# containers and pods. The content of the next fields will be set directly as
+# the securityContext of the container and pod used in those jobs.
 preDeleteHook:
   containerSecurityContext:
     allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
     capabilities:
       drop:
         - ALL
