@@ -19,6 +19,27 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].command[4]
           value: restart
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 1000
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: HOME
+            value: /tmp
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: tmp
+            mountPath: /tmp
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: tmp
+            emptyDir: {}
 
   - it: "should not render post-install hook for custom telemetry"
     set:

@@ -1,0 +1,44 @@
+suite: Container security contexts
+templates:
+  - controller/deployment.yaml
+  - controller/audit-scanner.yaml
+tests:
+  - it: "should set a read-only root filesystem on the controller container"
+    template: controller/deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop
+          value: ["ALL"]
+
+  - it: "should set a read-only root filesystem on the audit-scanner container"
+    template: controller/audit-scanner.yaml
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].securityContext.capabilities.drop
+          value: ["ALL"]
+
+  - it: "should let the user turn off the read-only root filesystem on the controller container"
+    template: controller/deployment.yaml
+    set:
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: false
+        capabilities:
+          drop:
+            - ALL
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: false

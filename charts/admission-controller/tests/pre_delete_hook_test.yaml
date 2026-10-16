@@ -75,6 +75,9 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
           value: false
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
       - notExists:
           path: spec.template.spec.containers[0].securityContext.runAsUser
       - isNotNullOrEmpty:

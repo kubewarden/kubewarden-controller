@@ -46,6 +46,13 @@ spec:
           env:
             - name: KUBERLR_ALLOWDOWNLOAD
               value: "1"
+            # This image runs kubectl through kuberlr. kuberlr downloads a new
+            # kubectl binary into a temporary file under /tmp, then moves the
+            # file into $HOME/.kuberlr. The move needs both paths on the same
+            # filesystem. Set HOME to /tmp, and mount one emptyDir at /tmp.
+            # Do not split this into two separate mounts.
+            - name: HOME
+              value: /tmp
           {{- if .Values.preDeleteHook.containerSecurityContext }}
           securityContext:
             runAsUser: 1000
@@ -56,4 +63,10 @@ spec:
           resources:
 {{ toYaml .Values.resources.postInstallJob | indent 12 }}
           {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
 {{ end }}
