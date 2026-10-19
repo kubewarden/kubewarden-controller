@@ -99,9 +99,12 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
         while let Some(event) = stream.next().await {
             let event = match event {
                 Ok(event) => event,
+                // A signal can interrupt the read, and the next read succeeds.
+                Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+                // Any other error means a broken descriptor, and the next read returns it again.
                 Err(e) => {
-                    warn!("Cannot read inotify event: {e}");
-                    continue;
+                    error!("Cannot read inotify event: {e}");
+                    break;
                 }
             };
 
@@ -197,10 +200,10 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
             }
         }
 
-        // The stream ends only on an error of the inotify file descriptor. Without it, no
-        // change of the TLS files is detected until a restart.
+        // The loop ends when a read returns 0 bytes, or on a read error that does not recover.
+        // Without the watch, no change of the TLS files is detected until a restart.
         error!(
-            "Inotify event stream ended, exiting so that the TLS files are loaded again on restart"
+            "Certificate watch stopped, exiting so that the TLS files are loaded again on restart"
         );
         std::process::exit(1);
     });
