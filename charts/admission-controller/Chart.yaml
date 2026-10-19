@@ -58,7 +58,7 @@ annotations:
     - name: kuberlr-kubectl
       image: ghcr.io/rancher/kuberlr-kubectl:v8.1.2
     - name: policy-reporter
-      image: ghcr.io/kyverno/policy-reporter:3.11.0
+      image: ghcr.io/kyverno/policy-reporter:3.11.1
     - name: policy-reporter-ui
       image: ghcr.io/kyverno/policy-reporter-ui:2.9.0
 dependencies:
@@ -67,6 +67,6 @@ dependencies:
     repository: https://openreports.github.io/reports-api
     condition: installOpenReportsCRDs
   - name: policy-reporter
-    version: 3.11.0
+    version: 3.11.1
     repository: https://kyverno.github.io/policy-reporter
     condition: auditScanner.policyReporter

@@ -30,10 +30,10 @@ metadata:
     hauler.dev/certificate-identity-regexp: https://github.com/kubewarden/policies/.github/workflows/release.yml@refs/tags/.*
 spec:
   images:
-    - name: ghcr.io/kubewarden/policies/allow-privilege-escalation-psp:v1.0.14
-    - name: ghcr.io/kubewarden/policies/capabilities-psp:v1.0.14
-    - name: ghcr.io/kubewarden/policies/host-namespaces-psp:v1.1.12
-    - name: ghcr.io/kubewarden/policies/hostpaths-psp:v1.1.11
+    - name: ghcr.io/kubewarden/policies/allow-privilege-escalation-psp:v1.0.15
+    - name: ghcr.io/kubewarden/policies/capabilities-psp:v1.0.15
+    - name: ghcr.io/kubewarden/policies/host-namespaces-psp:v1.1.13
+    - name: ghcr.io/kubewarden/policies/hostpaths-psp:v1.1.12
     - name: ghcr.io/kubewarden/policies/pod-privileged:v1.0.14
     - name: ghcr.io/kubewarden/policies/user-group-psp:v1.1.5
 ---
@@ -47,7 +47,7 @@ metadata:
 spec:
   images:
     - name: ghcr.io/kyverno/policy-reporter-ui:2.9.0
-    - name: ghcr.io/kyverno/policy-reporter:3.11.0
+    - name: ghcr.io/kyverno/policy-reporter:3.11.1
     - name: ghcr.io/rancher/kuberlr-kubectl:v8.1.2
 ---
 apiVersion: content.hauler.cattle.io/v1
@@ -60,7 +60,7 @@ spec:
       repoURL: https://charts.kubewarden.io
       version: 6.2.0-rc.1
     - name: policy-reporter
-      version: 3.11.0
+      version: 3.11.1
       repoURL: https://kyverno.github.io/policy-reporter
     - name: openreports
       version: 0.2.1
