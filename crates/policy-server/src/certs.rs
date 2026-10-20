@@ -11,13 +11,23 @@ use tokio_stream::StreamExt;
 use crate::config::TlsConfig;
 
 /// There's no watching of the certificate files on non-linux platforms
-/// since we rely on inotify to watch for changes
+/// since we rely on inotify to watch for changes. The returned task never ends, so
+/// the caller never stops the server because of it.
 #[cfg(not(target_os = "linux"))]
-async fn create_tls_config_and_watch_certificate_changes(
+pub(crate) async fn create_tls_config_and_watch_certificate_changes(
     tls_config: TlsConfig,
-) -> Result<RustlsConfig> {
-    let cfg = RustlsConfig::from_pem_file(tls_config.cert_file, tls_config.key_file).await?;
-    Ok(cfg)
+) -> Result<(
+    axum_server::tls_rustls::RustlsConfig,
+    crate::task::AbortOnDrop<anyhow::Error>,
+)> {
+    let cfg = axum_server::tls_rustls::RustlsConfig::from_pem_file(
+        tls_config.cert_file,
+        tls_config.key_file,
+    )
+    .await?;
+    let watcher = tokio::spawn(std::future::pending::<anyhow::Error>());
+
+    Ok((cfg, crate::task::AbortOnDrop::new(watcher)))
 }
 
 /// Return the RustlsConfig and watch for changes in the certificate files
