@@ -989,7 +989,7 @@ mod certificate_reload_helpers {
     use std::net::TcpStream;
 
     use anyhow::anyhow;
-    use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
+    use openssl::ssl::{SslConnector, SslMethod, SslStream, SslVerifyMode};
     use rcgen::{CertifiedKey, generate_simple_self_signed};
     use reqwest::StatusCode;
 
@@ -1054,6 +1054,24 @@ mod certificate_reload_helpers {
         }
     }
 
+    /// Open a TLS connection and keep it, instead of closing it like `get_tls_san_names`
+    /// does. The caller holds a connection the server accepted, the way a client with a
+    /// persistent HTTP connection would.
+    pub async fn open_tls_connection(domain_ip: &str, domain_port: &str) -> SslStream<TcpStream> {
+        let domain_ip = domain_ip.to_string();
+        let domain_port = domain_port.to_string();
+
+        tokio::task::spawn_blocking(move || {
+            let mut builder = SslConnector::builder(SslMethod::tls()).unwrap();
+            builder.set_verify(SslVerifyMode::NONE);
+            let connector = builder.build();
+            let stream = TcpStream::connect(format!("{domain_ip}:{domain_port}")).unwrap();
+            connector.connect(&domain_ip, stream).unwrap()
+        })
+        .await
+        .unwrap()
+    }
+
     pub async fn policy_server_is_ready(address: &str) -> anyhow::Result<StatusCode> {
         // wait for the server to start
         let client = reqwest::Client::builder().build().unwrap();
@@ -1061,6 +1079,64 @@ mod certificate_reload_helpers {
         let url = reqwest::Url::parse(&format!("http://{address}/readiness")).unwrap();
         let response = client.get(url).send().await?;
         Ok(response.status())
+    }
+
+    /// A directory with the layout that the kubelet uses for a Secret or a ConfigMap volume.
+    ///
+    /// Each file is a symlink to `..data/<name>`, and `..data` is a symlink to a timestamped
+    /// directory. An update writes a new timestamped directory, swaps `..data` with a rename,
+    /// then removes the old directory. The kubelet never writes to a file that a reader has
+    /// open, so a watch on a file sees no write.
+    pub struct KubeletVolume {
+        dir: tempfile::TempDir,
+        generation: u32,
+    }
+
+    impl KubeletVolume {
+        pub fn new(files: &[(&str, &str)]) -> Self {
+            let mut volume = KubeletVolume {
+                dir: tempfile::tempdir().expect("cannot create the volume directory"),
+                generation: 0,
+            };
+            volume.update(files);
+            for (name, _) in files {
+                std::os::unix::fs::symlink(format!("..data/{name}"), volume.path(name))
+                    .expect("cannot create the user-visible symlink");
+            }
+            volume
+        }
+
+        pub fn update(&mut self, files: &[(&str, &str)]) {
+            let old_data_dir = self.data_dir(self.generation);
+            self.generation += 1;
+            let new_data_dir = self.data_dir(self.generation);
+
+            std::fs::create_dir(self.dir.path().join(&new_data_dir))
+                .expect("cannot create the timestamped directory");
+            for (name, contents) in files {
+                std::fs::write(self.dir.path().join(&new_data_dir).join(name), contents)
+                    .expect("cannot write the file");
+            }
+
+            let data_tmp = self.dir.path().join("..data_tmp");
+            std::os::unix::fs::symlink(&new_data_dir, &data_tmp)
+                .expect("cannot create the ..data_tmp symlink");
+            std::fs::rename(&data_tmp, self.dir.path().join("..data"))
+                .expect("cannot swap the ..data symlink");
+
+            if self.generation > 1 {
+                std::fs::remove_dir_all(self.dir.path().join(&old_data_dir))
+                    .expect("cannot remove the old timestamped directory");
+            }
+        }
+
+        pub fn path(&self, name: &str) -> std::path::PathBuf {
+            self.dir.path().join(name)
+        }
+
+        fn data_dir(&self, generation: u32) -> String {
+            format!("..{generation}")
+        }
     }
 }
 
@@ -1201,6 +1277,296 @@ async fn test_detect_certificate_rotation() {
         .await
         .expect("failed to send validation request");
         assert_eq!(status_code, reqwest::StatusCode::OK);
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn certificate_reload_backoff() -> backon::ConstantBuilder {
+    backon::ConstantBuilder::default()
+        .with_delay(Duration::from_millis(250))
+        .with_max_times(40)
+}
+
+#[cfg(target_os = "linux")]
+async fn start_policy_server_with_tls(
+    tls_config: policy_server::config::TlsConfig,
+) -> (String, tokio::task::JoinHandle<anyhow::Result<()>>) {
+    use certificate_reload_helpers::*;
+
+    let mut config = default_test_config();
+    config.tls_config = Some(tls_config);
+    let address = config.addr.to_string();
+    let readiness_probe_address = config.readiness_probe_addr.to_string();
+
+    let mut server = tokio::spawn(async move {
+        let api_server = policy_server::PolicyServer::new_from_config(config).await?;
+        api_server.run().await
+    });
+
+    // The budget matches the other readiness waits of this file: on a loaded CI runner,
+    // fetching and compiling the test policies can take well over a minute.
+    let ready = (|| async { policy_server_is_ready(&readiness_probe_address).await }).retry(
+        ExponentialBuilder::default()
+            .with_min_delay(Duration::from_secs(10))
+            .with_max_delay(Duration::from_secs(30))
+            .with_max_times(5),
+    );
+
+    // If the server stops before it becomes ready, report its own error instead of the
+    // "connection refused" that the readiness probe would otherwise time out with.
+    let status_code = tokio::select! {
+        biased;
+        result = &mut server => match result {
+            Ok(Ok(())) => panic!("the server stopped before it became ready"),
+            Ok(Err(e)) => panic!("the server failed before it became ready: {e}"),
+            Err(e) => panic!("the server task panicked before it became ready: {e}"),
+        },
+        status = ready => status.expect("the server did not become ready"),
+    };
+    assert_eq!(status_code, reqwest::StatusCode::OK);
+
+    (address, server)
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_detect_certificate_rotation_on_kubelet_volume() {
+    use certificate_reload_helpers::*;
+
+    setup();
+
+    let tls_data = create_cert("cert1.example.com");
+    let mut volume = KubeletVolume::new(&[
+        ("tls.crt", tls_data.cert.as_str()),
+        ("tls.key", tls_data.key.as_str()),
+    ]);
+
+    let (address, _server) = start_policy_server_with_tls(policy_server::config::TlsConfig {
+        cert_file: volume.path("tls.crt"),
+        key_file: volume.path("tls.key"),
+        client_ca_file: vec![],
+    })
+    .await;
+    let (host, port) = address.split_once(':').unwrap();
+
+    check_tls_san_name(host, port, "cert1.example.com")
+        .await
+        .expect("certificate served doesn't use the expected SAN name");
+
+    // The second update makes sure that the watch survives the first one.
+    for hostname in ["cert2.example.com", "cert3.example.com"] {
+        let tls_data = create_cert(hostname);
+        volume.update(&[
+            ("tls.crt", tls_data.cert.as_str()),
+            ("tls.key", tls_data.key.as_str()),
+        ]);
+
+        (|| async { check_tls_san_name(host, port, hostname).await })
+            .retry(certificate_reload_backoff())
+            .await
+            .unwrap_or_else(|e| panic!("certificate for {hostname} hasn't been reloaded: {e}"));
+    }
+}
+
+#[cfg(target_os = "linux")]
+async fn check_client_ca_trust(
+    address: &str,
+    server_tls_data: &certificate_reload_helpers::TlsData,
+    trusted_client: &certificate_reload_helpers::TlsData,
+    untrusted_client: Option<&certificate_reload_helpers::TlsData>,
+) -> anyhow::Result<()> {
+    // Build a new client for each request, so that a pooled connection cannot hide a change of trust.
+    let client = build_request_client(
+        Some(server_tls_data),
+        Some(trusted_client.cert.clone()),
+        Some(trusted_client.key.clone()),
+        true,
+    );
+    let status_code =
+        send_validate_request(&client, address.to_owned(), Some(server_tls_data)).await?;
+    anyhow::ensure!(
+        status_code == reqwest::StatusCode::OK,
+        "trusted client got the status code {status_code}"
+    );
+
+    if let Some(untrusted_client) = untrusted_client {
+        let client = build_request_client(
+            Some(server_tls_data),
+            Some(untrusted_client.cert.clone()),
+            Some(untrusted_client.key.clone()),
+            true,
+        );
+        anyhow::ensure!(
+            send_validate_request(&client, address.to_owned(), Some(server_tls_data))
+                .await
+                .is_err(),
+            "a client of a removed CA is still trusted"
+        );
+    }
+
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_detect_client_ca_rotation_on_kubelet_volume() {
+    use certificate_reload_helpers::*;
+
+    setup();
+
+    let certs_dir = tempfile::tempdir().unwrap();
+    let cert_file = certs_dir.path().join("policy-server.pem");
+    let key_file = certs_dir.path().join("policy-server-key.pem");
+    let server_tls_data = create_cert("server.example.com");
+    fs::write(&cert_file, &server_tls_data.cert).await.unwrap();
+    fs::write(&key_file, &server_tls_data.key).await.unwrap();
+
+    // Each client certificate is self-signed, so it is also its own client CA.
+    let mut previous_client = create_cert("client1.example.com");
+    let mut volume = KubeletVolume::new(&[("client-ca.crt", previous_client.cert.as_str())]);
+
+    let (address, _server) = start_policy_server_with_tls(policy_server::config::TlsConfig {
+        cert_file,
+        key_file,
+        client_ca_file: vec![volume.path("client-ca.crt")],
+    })
+    .await;
+
+    check_client_ca_trust(&address, &server_tls_data, &previous_client, None)
+        .await
+        .expect("the first client CA isn't trusted");
+
+    // The second update makes sure that the watch survives the first one.
+    for hostname in ["client2.example.com", "client3.example.com"] {
+        let client = create_cert(hostname);
+        volume.update(&[("client-ca.crt", client.cert.as_str())]);
+
+        (|| async {
+            check_client_ca_trust(&address, &server_tls_data, &client, Some(&previous_client)).await
+        })
+        .retry(certificate_reload_backoff())
+        .await
+        .unwrap_or_else(|e| panic!("client CA of {hostname} hasn't been reloaded: {e}"));
+
+        previous_client = client;
+    }
+}
+
+/// The server must stop when the inotify watch can no longer detect a change of the TLS
+/// files, so that the kubelet restarts it and it loads the TLS files again from disk.
+/// Removing the whole volume, not only a file in it, forces the kernel to remove the
+/// watch on the directory (`IN_IGNORED`).
+#[cfg(target_os = "linux")]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_stop_server_when_tls_directory_is_removed() {
+    use certificate_reload_helpers::*;
+
+    setup();
+
+    let tls_data = create_cert("cert1.example.com");
+    let volume = KubeletVolume::new(&[
+        ("tls.crt", tls_data.cert.as_str()),
+        ("tls.key", tls_data.key.as_str()),
+    ]);
+
+    let (address, server) = start_policy_server_with_tls(policy_server::config::TlsConfig {
+        cert_file: volume.path("tls.crt"),
+        key_file: volume.path("tls.key"),
+        client_ca_file: vec![],
+    })
+    .await;
+    let (host, port) = address.split_once(':').unwrap();
+
+    check_tls_san_name(host, port, "cert1.example.com")
+        .await
+        .expect("certificate served doesn't use the expected SAN name");
+
+    drop(volume);
+
+    let run_result = tokio::time::timeout(Duration::from_secs(10), server)
+        .await
+        .expect("the server did not stop after the TLS directory was removed")
+        .expect("the server task panicked");
+    let error = run_result.expect_err("the server did not report an error");
+    assert!(
+        error.to_string().contains("no longer watched"),
+        "unexpected error: {error}"
+    );
+
+    // A single attempt is enough: by the time `server` resolved, `run` had already
+    // returned, which means the listener was already closed.
+    let connect_result = tokio::time::timeout(
+        Duration::from_secs(1),
+        tokio::net::TcpStream::connect(&address),
+    )
+    .await
+    .expect("connecting to the stopped server did not return promptly");
+    let connect_error =
+        connect_result.expect_err("the server still accepts connections after it stopped");
+    assert_eq!(
+        connect_error.kind(),
+        std::io::ErrorKind::ConnectionRefused,
+        "unexpected error: {connect_error}"
+    );
+}
+
+/// The server must close a connection it already accepted, not only stop accepting new
+/// ones, when the certificate watch can no longer detect a change of the TLS files.
+/// Without this, a client with a persistent connection keeps talking to a server whose
+/// certificate watch is dead, unaware that a restart would load a current one.
+#[cfg(target_os = "linux")]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_existing_connection_closes_when_tls_directory_is_removed() {
+    use std::io::Read;
+
+    use certificate_reload_helpers::*;
+
+    setup();
+
+    let tls_data = create_cert("cert1.example.com");
+    let volume = KubeletVolume::new(&[
+        ("tls.crt", tls_data.cert.as_str()),
+        ("tls.key", tls_data.key.as_str()),
+    ]);
+
+    let (address, server) = start_policy_server_with_tls(policy_server::config::TlsConfig {
+        cert_file: volume.path("tls.crt"),
+        key_file: volume.path("tls.key"),
+        client_ca_file: vec![],
+    })
+    .await;
+    let (host, port) = address.split_once(':').unwrap();
+
+    // A connection the server already accepted and completed the TLS handshake of,
+    // before the TLS directory is removed.
+    let connection = open_tls_connection(host, port).await;
+
+    drop(volume);
+    tokio::time::timeout(Duration::from_secs(10), server)
+        .await
+        .expect("the server did not stop after the TLS directory was removed")
+        .expect("the server task panicked")
+        .expect_err("the server did not report an error");
+
+    let read_result = tokio::task::spawn_blocking(move || {
+        let mut connection = connection;
+        connection
+            .get_mut()
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .expect("cannot set the read timeout");
+        let mut buf = [0u8; 1];
+        connection.read(&mut buf)
+    })
+    .await
+    .expect("the blocking read task panicked");
+
+    match read_result {
+        // An orderly close (EOF) or a reset both mean the server ended the connection.
+        Ok(0) => {}
+        Err(e) if e.kind() != std::io::ErrorKind::WouldBlock => {}
+        other => panic!(
+            "the connection accepted before the TLS directory was removed is still open: {other:?}"
+        ),
     }
 }
 
@@ -1574,8 +1940,7 @@ async fn send_validate_request(
         .header(header::CONTENT_TYPE, "application/json")
         .body(include_str!("data/pod_without_privileged_containers.json"))
         .send()
-        .await
-        .expect("successful request")
+        .await?
         .status())
 }
 
