@@ -34,7 +34,7 @@ opentelemetry = { version = "0.33.0", default-features = false, features = [
 opentelemetry-otlp = { version = "0.33.0", features = [
   "grpc-tonic",
   "metrics",
-  "tls",
+  "tls-aws-lc",
   "tonic",
 ] }
 opentelemetry_sdk = { version = "0.33.0", features = ["rt-tokio"] }
