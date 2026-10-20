@@ -74,4 +74,4 @@ docker-build: test ## Build docker image with the manager.
 
 .PHONY:build-docs
 build-docs:
-	cargo run --locked --release -- docs --output cli-docs.adoc
+	cargo run --release -- docs --output cli-docs.adoc
