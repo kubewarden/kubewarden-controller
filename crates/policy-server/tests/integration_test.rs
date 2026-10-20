@@ -1298,20 +1298,31 @@ async fn start_policy_server_with_tls(
     let address = config.addr.to_string();
     let readiness_probe_address = config.readiness_probe_addr.to_string();
 
-    let server = tokio::spawn(async move {
+    let mut server = tokio::spawn(async move {
         let api_server = policy_server::PolicyServer::new_from_config(config).await?;
         api_server.run().await
     });
 
-    let status_code = (|| async { policy_server_is_ready(&readiness_probe_address).await })
-        .retry(
-            ExponentialBuilder::default()
-                .with_min_delay(Duration::from_millis(500))
-                .with_max_delay(Duration::from_secs(10))
-                .with_max_times(10),
-        )
-        .await
-        .unwrap();
+    // The budget matches the other readiness waits of this file: on a loaded CI runner,
+    // fetching and compiling the test policies can take well over a minute.
+    let ready = (|| async { policy_server_is_ready(&readiness_probe_address).await }).retry(
+        ExponentialBuilder::default()
+            .with_min_delay(Duration::from_secs(10))
+            .with_max_delay(Duration::from_secs(30))
+            .with_max_times(5),
+    );
+
+    // If the server stops before it becomes ready, report its own error instead of the
+    // "connection refused" that the readiness probe would otherwise time out with.
+    let status_code = tokio::select! {
+        biased;
+        result = &mut server => match result {
+            Ok(Ok(())) => panic!("the server stopped before it became ready"),
+            Ok(Err(e)) => panic!("the server failed before it became ready: {e}"),
+            Err(e) => panic!("the server task panicked before it became ready: {e}"),
+        },
+        status = ready => status.expect("the server did not become ready"),
+    };
     assert_eq!(status_code, reqwest::StatusCode::OK);
 
     (address, server)
