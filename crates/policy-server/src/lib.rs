@@ -1,6 +1,7 @@
 mod certs;
 mod evaluation;
 mod policy_downloader;
+mod task;
 
 #[cfg(test)]
 mod test_utils;
@@ -70,7 +71,27 @@ pub struct PolicyServer {
     callback_handler_shutdown_channel_tx: oneshot::Sender<()>,
     addr: SocketAddr,
     tls_config: Option<RustlsConfig>,
+    /// Ends with an error when the certificate watch can no longer detect a change of the
+    /// TLS files. The server must stop then, so that a restart loads the files from disk.
+    /// Dropping it before that aborts the watch task.
+    cert_watcher: Option<task::AbortOnDrop<anyhow::Error>>,
     readiness_probe_addr: SocketAddr,
+}
+
+/// Closes every accepted connection of both servers when dropped, by sending each a hard
+/// shutdown signal. `run` keeps one of these alive for as long as it waits on the servers,
+/// so a connection accepted before that point does not keep running in its own task after
+/// `run` stops waiting.
+struct ServerShutdownGuard {
+    api: axum_server::Handle<SocketAddr>,
+    readiness: axum_server::Handle<SocketAddr>,
+}
+
+impl Drop for ServerShutdownGuard {
+    fn drop(&mut self) {
+        self.api.shutdown();
+        self.readiness.shutdown();
+    }
 }
 
 impl PolicyServer {
@@ -239,10 +260,12 @@ impl PolicyServer {
             evaluation_environment: Arc::new(evaluation_environment),
         });
 
-        let tls_config = if let Some(tls_config) = config.tls_config {
-            Some(create_tls_config_and_watch_certificate_changes(tls_config).await?)
+        let (tls_config, cert_watcher) = if let Some(tls_config) = config.tls_config {
+            let (tls_config, cert_watcher) =
+                create_tls_config_and_watch_certificate_changes(tls_config).await?;
+            (Some(tls_config), Some(cert_watcher))
         } else {
-            None
+            (None, None)
         };
 
         let mut router = Router::new()
@@ -274,6 +297,7 @@ impl PolicyServer {
             callback_handler_shutdown_channel_tx,
             addr: config.addr,
             tls_config,
+            cert_watcher,
             readiness_probe_addr: config.readiness_probe_addr,
         })
     }
@@ -288,17 +312,35 @@ impl PolicyServer {
             info!(status = "exit", "CallbackHandler task");
         });
 
+        let api_handle = axum_server::Handle::new();
+        let readiness_handle = axum_server::Handle::new();
+        // Close every accepted connection of both servers as soon as `run` stops waiting on
+        // them, for any reason: one of the two servers failing, the certificate watch
+        // stopping, or the caller cancelling `run` itself. Without this, a connection
+        // accepted before that point keeps its own task running, unseen.
+        let _shutdown_guard = ServerShutdownGuard {
+            api: api_handle.clone(),
+            readiness: readiness_handle.clone(),
+        };
+
         let api_server = async {
             if let Some(tls_config) = self.tls_config {
-                let server_with_tls = axum_server::bind_rustls(self.addr, tls_config);
+                let server_with_tls =
+                    axum_server::bind_rustls(self.addr, tls_config).handle(api_handle);
                 notify.notify_one();
 
-                server_with_tls.serve(self.router.into_make_service()).await
+                server_with_tls
+                    .serve(self.router.into_make_service())
+                    .await
+                    .map_err(anyhow::Error::from)
             } else {
-                let server = axum_server::bind(self.addr);
+                let server = axum_server::bind(self.addr).handle(api_handle);
                 notify.notify_one();
 
-                server.serve(self.router.into_make_service()).await
+                server
+                    .serve(self.router.into_make_service())
+                    .await
+                    .map_err(anyhow::Error::from)
             }
         };
 
@@ -306,11 +348,29 @@ impl PolicyServer {
             notify.notified().await;
 
             axum_server::bind(self.readiness_probe_addr)
+                .handle(readiness_handle)
                 .serve(self.readiness_probe_router.into_make_service())
                 .await
+                .map_err(anyhow::Error::from)
         };
 
-        tokio::try_join!(api_server, readiness_probe_server)?;
+        // Ends only when the certificate watch can no longer detect a change of the TLS
+        // files. Without TLS there is no watch, so this future never ends, and try_join!
+        // below waits on the two servers instead.
+        let cert_watcher = async {
+            match self.cert_watcher {
+                Some(watcher) => {
+                    let e = match watcher.await {
+                        Ok(e) => e,
+                        Err(e) => anyhow!("Certificate watch task failed: {e}"),
+                    };
+                    Err::<(), anyhow::Error>(anyhow!("Certificate watch stopped: {e}"))
+                }
+                None => std::future::pending().await,
+            }
+        };
+
+        tokio::try_join!(api_server, readiness_probe_server, cert_watcher)?;
 
         self.callback_handler_shutdown_channel_tx
             .send(())

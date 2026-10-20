@@ -32,11 +32,19 @@ async fn create_tls_config_and_watch_certificate_changes(
 /// directory, so the next updates are not detected. A watch on the directory survives
 /// every update.
 ///
+/// The returned task resolves only when the watch becomes unable to detect a change of
+/// the TLS files, for example because the kernel removed a watched directory. The
+/// caller must stop the server when that happens, so that a restart loads the TLS
+/// files from disk again.
+///
 /// Relying on inotify is only available on linux
 #[cfg(target_os = "linux")]
 pub(crate) async fn create_tls_config_and_watch_certificate_changes(
     tls_config: TlsConfig,
-) -> Result<axum_server::tls_rustls::RustlsConfig> {
+) -> Result<(
+    axum_server::tls_rustls::RustlsConfig,
+    crate::task::AbortOnDrop<anyhow::Error>,
+)> {
     use std::{
         collections::{BTreeSet, HashMap},
         path::PathBuf,
@@ -90,7 +98,7 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
         .into_event_stream(buffer)
         .map_err(|e| anyhow!("Cannot create inotify event stream: {e}"))?;
 
-    tokio::spawn(async move {
+    let watcher = tokio::spawn(async move {
         tokio::pin!(stream);
         let mut cert_changed = false;
         let mut key_changed = false;
@@ -102,10 +110,7 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
                 // A signal can interrupt the read, and the next read succeeds.
                 Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
                 // Any other error means a broken descriptor, and the next read returns it again.
-                Err(e) => {
-                    error!("Cannot read inotify event: {e}");
-                    break;
-                }
+                Err(e) => return anyhow!("Cannot read inotify event: {e}"),
             };
 
             let changed = if event.mask.contains(EventMask::Q_OVERFLOW) {
@@ -121,16 +126,15 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
                 };
                 if event.mask.contains(EventMask::IGNORED) {
                     // The kernel removed the watch: the directory was deleted or unmounted. In
-                    // a pod, the roots of the volumes are mount points, and the kubelet never
-                    // removes them while the pod runs. A file in a subdirectory of a volume
-                    // (`items[].path: sub/tls.crt`) causes this on each update of the volume.
-                    // The controller does not create that layout. The other directories are
-                    // still watched, so the loop continues.
-                    error!(
-                        directories = ?dirs,
-                        "Directory is no longer watched, changes of the TLS files in it will not be detected until a restart"
+                    // a pod, the root of each volume is a mount point, and the kubelet never
+                    // removes it while the pod runs. A file in a subdirectory of a volume
+                    // (`items[].path: sub/tls.crt`) causes this on every update of the volume,
+                    // because the watch follows the timestamped directory that the kubelet
+                    // replaces. The controller does not create that layout. Stop the watch, so
+                    // that the caller restarts the server and loads the new files from disk.
+                    return anyhow!(
+                        "Directory {dirs:?} is no longer watched, changes of the TLS files in it cannot be detected"
                     );
-                    continue;
                 }
                 let Some(name) = &event.name else {
                     continue;
@@ -200,15 +204,13 @@ pub(crate) async fn create_tls_config_and_watch_certificate_changes(
             }
         }
 
-        // The loop ends when a read returns 0 bytes, or on a read error that does not recover.
-        // Without the watch, no change of the TLS files is detected until a restart.
-        error!(
-            "Certificate watch stopped, exiting so that the TLS files are loaded again on restart"
-        );
-        std::process::exit(1);
+        // The while loop above returns early on a read error that does not recover. It falls
+        // through to here only when a read returns 0 bytes, which also means the watch can no
+        // longer detect a change of the TLS files.
+        anyhow!("Inotify event stream ended")
     });
 
-    Ok(rust_config)
+    Ok((rust_config, crate::task::AbortOnDrop::new(watcher)))
 }
 
 /// The name of the symlink that the kubelet swaps when it updates a Secret or ConfigMap volume.
