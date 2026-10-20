@@ -7,7 +7,7 @@ build-release:
 
 .PHONY:build-docs
 build-docs:
-	cargo run --release -- docs --output cli-docs.adoc
+	cargo run --locked --release -- docs --output cli-docs.adoc
 
 .PHONY: fmt
 fmt:
