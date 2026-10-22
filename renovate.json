@@ -66,6 +66,9 @@
       "matchManagers": [
         "gomod"
       ],
+      "matchDatasources": [
+        "go"
+      ],
       "groupName": "Go dependencies"
     },
     {
@@ -104,11 +107,17 @@
       "matchManagers": [
         "github-actions"
       ],
+      "matchDatasources": [
+        "!golang-version"
+      ],
       "groupName": "GitHub Actions"
     },
     {
       "matchManagers": [
         "custom.regex"
+      ],
+      "matchDatasources": [
+        "!golang-version"
       ],
       "groupName": "Custom manager updates"
     },
