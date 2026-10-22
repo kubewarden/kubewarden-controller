@@ -13,11 +13,14 @@ metadata:
 spec:
   images:
     - name: ghcr.io/kubewarden/adm-controller/audit-scanner:v1.39.0-rc.2
-      certificate-identity-regexp: https://github.com/kubewarden/adm-controller/.github/workflows/release.yml@refs/tags/v1.39.0-rc.2
+      certificate-identity-regexp: ^https://github\.com/kubewarden/github-actions/\.github/workflows/container-release\.yml@
+      certificate-github-workflow-repository: kubewarden/adm-controller
     - name: ghcr.io/kubewarden/adm-controller/controller:v1.39.0-rc.2
-      certificate-identity-regexp: https://github.com/kubewarden/adm-controller/.github/workflows/release.yml@refs/tags/v1.39.0-rc.2
+      certificate-identity-regexp: ^https://github\.com/kubewarden/github-actions/\.github/workflows/container-release\.yml@
+      certificate-github-workflow-repository: kubewarden/adm-controller
     - name: ghcr.io/kubewarden/adm-controller/policy-server:v1.39.0-rc.2
-      certificate-identity-regexp: https://github.com/kubewarden/adm-controller/.github/workflows/release.yml@refs/tags/v1.39.0-rc.2
+      certificate-identity-regexp: ^https://github\.com/kubewarden/github-actions/\.github/workflows/container-release\.yml@
+      certificate-github-workflow-repository: kubewarden/adm-controller
 ---
 # The policies are in a separated definition just to allow a better keyless validation
 # without the need to duplicate configuration
