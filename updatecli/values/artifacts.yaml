@@ -4,9 +4,6 @@
 ociArtifacts:
   # Kubewarden container images
   #
-  # The workflowUrl field defined in the Kubewarden
-  # container images is the url used to validate the identity with cosign
-  #
   # - The skipVersionFromRegistry field defined in the Kubewarden images is a
   #   flag to skip update of the images version in the Helm chart with the
   #   version in the registry. These container images should use the container
@@ -16,19 +13,16 @@ ociArtifacts:
   - file: "charts/admission-controller/values.yaml"
     key: "$.image.tag"
     image: "ghcr.io/kubewarden/adm-controller/controller"
-    workflowUrl: "https://github.com/kubewarden/adm-controller/.github/workflows/release.yml@refs/tags"
     skipVersionFromRegistry: true
     artifactHubImage: true
   - file: "charts/admission-controller/values.yaml"
     key: "$.auditScanner.image.tag"
     image: "ghcr.io/kubewarden/adm-controller/audit-scanner"
-    workflowUrl: "https://github.com/kubewarden/adm-controller/.github/workflows/release.yml@refs/tags"
     skipVersionFromRegistry: true
     artifactHubImage: true
   - file: "charts/admission-controller/values.yaml"
     key: "$.policyServer.image.tag"
     image: "ghcr.io/kubewarden/adm-controller/policy-server"
-    workflowUrl: "https://github.com/kubewarden/adm-controller/.github/workflows/release.yml@refs/tags"
     skipVersionFromRegistry: true
     artifactHubImage: true
   # Policies
@@ -70,20 +64,3 @@ helmCharts:
     file: "charts/admission-controller/Chart.yaml"
     versionKey: "$.dependencies[0].version"
     repository: https://openreports.github.io/reports-api
-
-kubewardenContainerImage:
-  - name: "controller"
-    file: "charts/admission-controller/values.yaml"
-    key: "$.image.tag"
-    image: "ghcr.io/kubewarden/adm-controller/controller"
-    workflowUrl: "https://github.com/kubewarden/adm-controller/.github/workflows/release.yml@refs/tags"
-  - name: "auditScanner"
-    file: "charts/admission-controller/values.yaml"
-    key: "$.auditScanner.image.tag"
-    image: "ghcr.io/kubewarden/adm-controller/audit-scanner"
-    workflowUrl: "https://github.com/kubewarden/audit-scanner/.github/workflows/release.yml@refs/tags"
-  - name: "policyServer"
-    file: "charts/admission-controller/values.yaml"
-    key: "$.policyServer.image.tag"
-    image: "ghcr.io/kubewarden/adm-controller/policy-server"
-    workflowUrl: "https://github.com/kubewarden/policy-server/.github/workflows/release.yml@refs/tags"

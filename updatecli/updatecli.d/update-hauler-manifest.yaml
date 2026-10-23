@@ -86,19 +86,6 @@ targets:
       file: "charts/hauler_manifest.yaml"
       matchpattern: "(.*)- ?name: ?{{ $oci.image }}:(v?.+) ?(.*)"
       replacepattern: '$1- name: {{ $oci.image }}:{{ printf "source/%sVersion" $oci.image | source }}'
-  # {{ if $oci.workflowUrl }}
-  "target/{{ $oci.image }}IdentityRegex":
-    name: "Update {{ $oci.image }} image identity regex in Hauler manifest"
-    kind: file
-    sourceid: "source/{{ $oci.image }}Version"
-    dependson:
-      - '{{ printf "source#source/%sVersion" $oci.image }}'
-    scmid: "default"
-    spec:
-      file: "charts/hauler_manifest.yaml"
-      matchpattern: "(.*)? certificate-identity-regexp: ?{{ $oci.workflowUrl }}/(v?.+) ?(.*)"
-      replacepattern: '$1 certificate-identity-regexp: {{ $oci.workflowUrl }}/{{ printf "source/%sVersion" $oci.image | source }}'
-  # {{ end }}
   # {{ end }}
   # {{ range $i, $chart := .helmCharts}}
   "target/{{ $chart.name}}Chart":
