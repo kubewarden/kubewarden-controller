@@ -105,6 +105,13 @@ func (r *AdmissionPolicyGroupReconciler) SetupWithManager(mgr ctrl.Manager) erro
 			handler.EnqueueRequestsFromMapFunc(r.findAllPoliciesForControllerConfigMap),
 			builder.WithPredicates(controllerConfigMapPredicate(r.DeploymentsNamespace, r.ControllerConfigMapName)),
 		).
+		// The CA root secret is the source of the CA bundle of the webhook
+		// configuration. A rotation of the CA root changes the bundle.
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.findAllPoliciesForControllerConfigMap),
+			builder.WithPredicates(caRootSecretPredicate(r.DeploymentsNamespace, constants.CARootSecretName)),
+		).
 		Complete(r)
 	if err != nil {
 		return errors.Join(errors.New("failed enrolling controller with manager"), err)

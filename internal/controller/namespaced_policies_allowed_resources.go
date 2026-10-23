@@ -218,43 +218,6 @@ func controllerConfigMapPredicate(namespace, name string) predicate.Funcs {
 	})
 }
 
-// findAllAdmissionPolicies maps a change of the controller configuration
-// ConfigMap to a reconcile request for every AdmissionPolicy in the cluster.
-func findAllAdmissionPolicies(ctx context.Context, k8sClient client.Client, log logr.Logger) []reconcile.Request {
-	admissionPolicies := policiesv1.AdmissionPolicyList{}
-	if err := k8sClient.List(ctx, &admissionPolicies); err != nil {
-		log.Error(err, "cannot list AdmissionPolicies after a change of the controller configuration")
-		return []reconcile.Request{}
-	}
-
-	requests := make([]reconcile.Request, 0, len(admissionPolicies.Items))
-	for _, policy := range admissionPolicies.Items {
-		requests = append(requests, reconcile.Request{
-			NamespacedName: client.ObjectKey{Name: policy.Name, Namespace: policy.Namespace},
-		})
-	}
-	return requests
-}
-
-// findAllAdmissionPolicyGroups maps a change of the controller configuration
-// ConfigMap to a reconcile request for every AdmissionPolicyGroup in the
-// cluster.
-func findAllAdmissionPolicyGroups(ctx context.Context, k8sClient client.Client, log logr.Logger) []reconcile.Request {
-	admissionPolicyGroups := policiesv1.AdmissionPolicyGroupList{}
-	if err := k8sClient.List(ctx, &admissionPolicyGroups); err != nil {
-		log.Error(err, "cannot list AdmissionPolicyGroups after a change of the controller configuration")
-		return []reconcile.Request{}
-	}
-
-	requests := make([]reconcile.Request, 0, len(admissionPolicyGroups.Items))
-	for _, policy := range admissionPolicyGroups.Items {
-		requests = append(requests, reconcile.Request{
-			NamespacedName: client.ObjectKey{Name: policy.Name, Namespace: policy.Namespace},
-		})
-	}
-	return requests
-}
-
 // findAllPolicyServers maps a change of the controller configuration
 // ConfigMap to a reconcile request for every PolicyServer in the cluster.
 func findAllPolicyServers(ctx context.Context, k8sClient client.Client, log logr.Logger) []reconcile.Request {
