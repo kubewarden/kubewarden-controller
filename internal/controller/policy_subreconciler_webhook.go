@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	policiesv1 "github.com/kubewarden/adm-controller/api/policies/v1"
+	"github.com/kubewarden/adm-controller/internal/certs"
 	"github.com/kubewarden/adm-controller/internal/constants"
 )
 
@@ -62,7 +63,7 @@ func (r *policySubReconciler) reconcileValidatingWebhookConfiguration(
 				Name: policy.GetUniqueName() + constants.WebhookNameSuffix,
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service:  &service,
-					CABundle: admissionSecret.Data[constants.CARootCert],
+					CABundle: certs.CABundleFromSecret(admissionSecret),
 				},
 				Rules:                   policy.GetRules(),
 				FailurePolicy:           policy.GetFailurePolicy(),
@@ -149,7 +150,7 @@ func (r *policySubReconciler) reconcileMutatingWebhookConfiguration(
 				Name: policy.GetUniqueName() + constants.WebhookNameSuffix,
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service:  &service,
-					CABundle: admissionSecret.Data[constants.CARootCert],
+					CABundle: certs.CABundleFromSecret(admissionSecret),
 				},
 				Rules:                   policy.GetRules(),
 				FailurePolicy:           policy.GetFailurePolicy(),
