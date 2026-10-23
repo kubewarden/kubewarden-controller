@@ -41,3 +41,28 @@ tests:
     asserts:
       - isNotNullOrEmpty:
           path: webhooks[*].clientConfig.caBundle
+  - it: "should mark the webhook configurations for the CA bundle injection of the controller"
+    documentSelector:
+      path: apiVersion
+      value: admissionregistration.k8s.io/v1
+      matchMany: true
+    asserts:
+      - equal:
+          path: metadata.annotations["kubewarden.io/inject-ca-from"]
+          value: kubewarden/kubewarden-ca
+  - it: "should keep the CA bundle injection annotation next to additionalAnnotations"
+    documentSelector:
+      path: apiVersion
+      value: admissionregistration.k8s.io/v1
+      matchMany: true
+    set:
+      additionalAnnotations:
+        team: platform
+        kubewarden.io/inject-ca-from: other/secret
+    asserts:
+      - equal:
+          path: metadata.annotations["kubewarden.io/inject-ca-from"]
+          value: kubewarden/kubewarden-ca
+      - equal:
+          path: metadata.annotations.team
+          value: platform

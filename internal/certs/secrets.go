@@ -29,6 +29,19 @@ func ExtractCARootFromSecret(caRootSecret *corev1.Secret) ([]byte, []byte, error
 	return caCert, caPrivateKey, nil
 }
 
+// CABundleFromSecret returns the CA bundle of the CA root secret: the CA
+// certificate, followed by the old CA certificate if the secret has one. Every
+// caBundle of a webhook configuration must come from this function. The result
+// is a new deep-copy slice, so a change to it does not change the secret.
+func CABundleFromSecret(caRootSecret *corev1.Secret) []byte {
+	caCert := caRootSecret.Data[constants.CARootCert]
+	oldCACert := caRootSecret.Data[constants.OldCARootCert]
+
+	bundle := make([]byte, 0, len(caCert)+len(oldCACert))
+	bundle = append(bundle, caCert...)
+	return append(bundle, oldCACert...)
+}
+
 // ExtractServerCertFromSecret extracts the server certificate and private key from a secret.
 // Both are PEM encoded.
 func ExtractServerCertFromSecret(serverCertSecret *corev1.Secret) ([]byte, []byte, error) {

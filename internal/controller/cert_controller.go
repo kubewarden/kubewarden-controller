@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-logr/logr"
 
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -41,6 +40,21 @@ func startupReconcileBackoff() wait.Backoff {
 	}
 }
 
+// CertReconciler owns the certificate Secrets of the stack, all in DeploymentsNamespace:
+//   - the CA root secret CARootSecretName (ca.crt, ca.key, and old-ca.crt for 60 days after a rotation of the CA root)
+//   - the secret WebhookServerCertSecretName of the webhook server of the controller (the one for Kubewarden CRDs),
+//     for the DNS name of its service WebhookServiceName.
+//   - the audit scanner client secret AuditScannerClientCertSecretName
+//   - the secret of every policy server, found by the label app.kubernetes.io/component: policy-server. The webhook
+//     configurations of the policies send the requests to the policy servers.
+//
+// It is a Runnable, not a controller: it watches nothing. It runs on the leader, at startup and every 12 hours. It
+// replaces each certificate that expires within constants.CertLookahead or that the current CA root did not sign.
+//
+// It does not write caBundle. The owners of the controller webhook configurations watch the CA root secret and write
+// certs.CABundleFromSecret. This is done by:
+//   - WebhookCABundleReconciler for the webhook configurations of the controller
+//   - the policy reconcilers for the webhook configurations of the policies.
 type CertReconciler struct {
 	client.Client
 	Log                              logr.Logger
@@ -60,9 +74,9 @@ func (r *CertReconciler) Start(ctx context.Context) error {
 	// after a long downtime. Then the webhooks with failurePolicy Fail block
 	// admission until the certificates rotate. Do not wait for the first tick.
 	// A failed pass at startup must not wait 12 hours for the next tick.
-	// The writes of the secrets and of the webhook configurations already retry
-	// on a conflict. This backoff covers the other failures: the API server is
-	// not reachable, or a conflict lasts longer than the retry of one write.
+	// The writes of the secrets already retry on a conflict. This backoff
+	// covers the other failures: the API server is not reachable, or a
+	// conflict lasts longer than the retry of one write.
 	// Retry for a few minutes before the ticker takes over.
 	if err := wait.ExponentialBackoffWithContext(ctx, startupReconcileBackoff(), func(ctx context.Context) (bool, error) {
 		if err := r.reconcile(ctx); err != nil {
@@ -155,7 +169,6 @@ func (r *CertReconciler) updateSecretWithRetry(ctx context.Context, secret *core
 
 // reconcileCARoot reconciles the CA root certificate by rotating it if it is about to expire.
 // It saves the old CA root certificate in the secret so that we can remove it after it is no longer valid.
-// Also, it updates the webhook configurations by injecting a bundle containing the new and old CA root certificates.
 func (r *CertReconciler) reconcileCARoot(ctx context.Context, caRootSecret *corev1.Secret) error {
 	caCert, caPrivateKey, err := certs.ExtractCARootFromSecret(caRootSecret)
 	if err != nil {
@@ -180,11 +193,6 @@ func (r *CertReconciler) reconcileCARoot(ctx context.Context, caRootSecret *core
 			return fmt.Errorf("failed to update CA root secret: %w", err)
 		}
 
-		err = r.reconcileWebhookConfigurations(ctx, append(caCert, oldCACert...))
-		if err != nil {
-			return fmt.Errorf("failed to reconcile webhook configurations: %w", err)
-		}
-
 		r.Log.Info("CA root certificate rotated successfully")
 	}
 
@@ -192,7 +200,6 @@ func (r *CertReconciler) reconcileCARoot(ctx context.Context, caRootSecret *core
 }
 
 // reconcileOldCARoot reconciles the old CA root certificate by removing it if it is no longer valid.
-// It also updates the webhook configurations by removing the old CA root certificate from the CA bundle.
 func (r *CertReconciler) reconcileOldCARoot(ctx context.Context, caRootSecret *corev1.Secret) error {
 	oldCACert, ok := caRootSecret.Data[constants.OldCARootCert]
 	if !ok {
@@ -202,12 +209,6 @@ func (r *CertReconciler) reconcileOldCARoot(ctx context.Context, caRootSecret *c
 	if err := certs.VerifyCA(oldCACert, nil, time.Now()); err != nil {
 		r.Log.Info("Old CA root certificate is not valid anymore, removing the old CA root certificate", "verification error", err)
 
-		var caCert []byte
-		caCert, _, err = certs.ExtractCARootFromSecret(caRootSecret)
-		if err != nil {
-			return fmt.Errorf("failed to extract CA root from secret: %w", err)
-		}
-
 		err = r.updateSecretWithRetry(ctx, caRootSecret, func(secret *corev1.Secret) {
 			delete(secret.Data, constants.OldCARootCert)
 		})
@@ -215,60 +216,7 @@ func (r *CertReconciler) reconcileOldCARoot(ctx context.Context, caRootSecret *c
 			return fmt.Errorf("failed to update CA root secret: %w", err)
 		}
 
-		err = r.reconcileWebhookConfigurations(ctx, caCert)
-		if err != nil {
-			return fmt.Errorf("failed to reconcile webhook configurations: %w", err)
-		}
-
 		r.Log.Info("Old CA root certificate removed successfully")
-	}
-
-	return nil
-}
-
-// reconcileWebhookConfigurations injects the CA bundle into the webhook configurations.
-// It uses RetryOnConflict because the policy reconcilers update the same webhook configurations.
-func (r *CertReconciler) reconcileWebhookConfigurations(ctx context.Context, caBundle []byte) error {
-	validatingWebhookConfigurationList := &admissionregistrationv1.ValidatingWebhookConfigurationList{}
-	if err := r.List(ctx, validatingWebhookConfigurationList, client.MatchingLabels{
-		constants.PartOfLabelKey: constants.PartOfLabelValue,
-	}); err != nil {
-		return fmt.Errorf("failed to list validating webhook configurations: %w", err)
-	}
-
-	for _, validatingWebhookConfiguration := range validatingWebhookConfigurationList.Items {
-		original := validatingWebhookConfiguration.DeepCopy()
-		for i := range validatingWebhookConfiguration.Webhooks {
-			validatingWebhookConfiguration.Webhooks[i].ClientConfig.CABundle = caBundle
-		}
-
-		err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-			return r.Patch(ctx, &validatingWebhookConfiguration, client.MergeFrom(original))
-		})
-		if err != nil {
-			return fmt.Errorf("failed to patch validating webhook configuration: %w", err)
-		}
-	}
-
-	mutatingWebhookConfigurationList := &admissionregistrationv1.MutatingWebhookConfigurationList{}
-	if err := r.List(ctx, mutatingWebhookConfigurationList, client.MatchingLabels{
-		constants.PartOfLabelKey: constants.PartOfLabelValue,
-	}); err != nil {
-		return fmt.Errorf("failed to list mutating webhook configurations: %w", err)
-	}
-
-	for _, mutatingWebhookConfiguration := range mutatingWebhookConfigurationList.Items {
-		original := mutatingWebhookConfiguration.DeepCopy()
-		for i := range mutatingWebhookConfiguration.Webhooks {
-			mutatingWebhookConfiguration.Webhooks[i].ClientConfig.CABundle = caBundle
-		}
-
-		err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-			return r.Patch(ctx, &mutatingWebhookConfiguration, client.MergeFrom(original))
-		})
-		if err != nil {
-			return fmt.Errorf("failed to patch mutating webhook configuration: %w", err)
-		}
 	}
 
 	return nil

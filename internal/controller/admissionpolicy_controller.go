@@ -102,12 +102,19 @@ func (r *AdmissionPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// can activate or reject every namespaced policy.
 		Watches(
 			&corev1.ConfigMap{},
-			handler.EnqueueRequestsFromMapFunc(r.findAllPoliciesForControllerConfigMap),
+			handler.EnqueueRequestsFromMapFunc(r.findAllPolicies),
 			builder.WithPredicates(controllerConfigMapPredicate(r.DeploymentsNamespace, r.ControllerConfigMapName)),
 		).
 		Watches(
 			&admissionregistrationv1.MutatingWebhookConfiguration{},
 			handler.EnqueueRequestsFromMapFunc(r.findAdmissionPolicyForWebhookConfiguration),
+		).
+		// The CA root secret is the source of the CA bundle of the webhook
+		// configuration. A rotation of the CA root changes the bundle.
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.findAllPolicies),
+			builder.WithPredicates(caRootSecretPredicate(r.DeploymentsNamespace, constants.CARootSecretName)),
 		).
 		Complete(r)
 	if err != nil {
@@ -150,6 +157,6 @@ func (r *AdmissionPolicyReconciler) findAdmissionPolicyForWebhookConfiguration(_
 	}
 }
 
-func (r *AdmissionPolicyReconciler) findAllPoliciesForControllerConfigMap(ctx context.Context, _ client.Object) []reconcile.Request {
+func (r *AdmissionPolicyReconciler) findAllPolicies(ctx context.Context, _ client.Object) []reconcile.Request {
 	return findAllAdmissionPolicies(ctx, r.Client, r.Log)
 }

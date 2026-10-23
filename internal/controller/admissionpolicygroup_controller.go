@@ -102,8 +102,15 @@ func (r *AdmissionPolicyGroupReconciler) SetupWithManager(mgr ctrl.Manager) erro
 		// can activate or reject every namespaced policy.
 		Watches(
 			&corev1.ConfigMap{},
-			handler.EnqueueRequestsFromMapFunc(r.findAllPoliciesForControllerConfigMap),
+			handler.EnqueueRequestsFromMapFunc(r.findAllPolicies),
 			builder.WithPredicates(controllerConfigMapPredicate(r.DeploymentsNamespace, r.ControllerConfigMapName)),
+		).
+		// The CA root secret is the source of the CA bundle of the webhook
+		// configuration. A rotation of the CA root changes the bundle.
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.findAllPolicies),
+			builder.WithPredicates(caRootSecretPredicate(r.DeploymentsNamespace, constants.CARootSecretName)),
 		).
 		Complete(r)
 	if err != nil {
@@ -146,6 +153,6 @@ func (r *AdmissionPolicyGroupReconciler) findAdmissionPolicyForWebhookConfigurat
 	}
 }
 
-func (r *AdmissionPolicyGroupReconciler) findAllPoliciesForControllerConfigMap(ctx context.Context, _ client.Object) []reconcile.Request {
+func (r *AdmissionPolicyGroupReconciler) findAllPolicies(ctx context.Context, _ client.Object) []reconcile.Request {
 	return findAllAdmissionPolicyGroups(ctx, r.Client, r.Log)
 }
