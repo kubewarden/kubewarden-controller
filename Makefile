@@ -201,7 +201,7 @@ $(LOCALBIN):
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION := v2.14.0
 # renovate: datasource=github-releases depName=zizmorcore/zizmor extractVersion=^v(?<version>.*)$
-ZIZMOR_VERSION := 1.30.1
+ZIZMOR_VERSION := 1.31.1
 # renovate: datasource=github-releases depName=crate-ci/typos extractVersion=^v(?<version>.*)$
 TYPOS_VERSION := 1.51.1
 
