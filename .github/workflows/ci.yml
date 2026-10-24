@@ -420,7 +420,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
           tool: cargo-llvm-cov
       - name: Install cosign # this is needed by some of the e2e tests
@@ -480,7 +480,7 @@ jobs:
         uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           # helm --verify=false flag only exists on Helm >= 4
-          version: v4.3.0
+          version: v4.3.1
       # Disable plugin verification until the following issue is addressed https://github.com/helm-unittest/helm-unittest/issues/777
       - name: Install Helm-unittest
         run: helm plugin install https://github.com/helm-unittest/helm-unittest --verify=false
